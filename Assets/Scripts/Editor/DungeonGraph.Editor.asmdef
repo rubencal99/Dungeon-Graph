@@ -1,0 +1,18 @@
+{
+    "name": "DungeonGraph.Editor",
+    "rootNamespace": "DungeonGraph.Editor",
+    "references": [
+        "GUID:4a35f8b6115e27f4abbd4e6fa439d570"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

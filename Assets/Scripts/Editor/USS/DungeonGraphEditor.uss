@@ -9,3 +9,85 @@ DungeonGraphView
     --grid-background-color: rgb(35, 35, 35);
     --line-color: rgb(32, 32, 32);
 }
+
+/* Base look shared by all nodes */
+.dungeon-node .main-container {
+  background-color: rgba(28,28,30,1); /* opaque to hide wires */
+  border-radius: 10px;
+  border-width: 1px;                  /* ensure visible border */
+  /*border-style: solid;*/
+  border-color: rgba(0, 0, 0, 0);
+}
+
+/* Make the title + extension areas opaque too */
+.dungeon-node .title-container,
+.dungeon-node .extension-container {
+  background-color: rgba(28, 28, 30, 1);
+}
+
+/* Center overlay for your hidden, overlapped ports (the container you created in code) */
+.dungeon-node #center-port-container {
+  position: absolute;
+  left: 0; right: 0; top: 0; bottom: 0;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
+
+/* The visible jack */
+.dungeon-node #center-jack.jack {
+  width: 18px;
+  height: 18px;
+  /* The jack itself is visible; ports inside are invisible and fill this box */
+}
+/* Shapes */
+.dungeon-node #center-jack.jack--circle {
+  border-radius: 999px;
+}
+
+/* Hide the built-in port caps; we use the jack as the visual */
+.dungeon-node .port .connector {
+  width: 12px;
+  height: 12px;
+  opacity: 0;
+}
+
+/* Colors per node type (adjust to taste) */
+.node-start   #center-jack { background-color: #1db954; }
+.node-basic   #center-jack { background-color: #60a5fa; }
+.node-hub     #center-jack { background-color: #a78bfa; }
+.node-end     #center-jack { background-color: #f87171; }
+.node-debug   #center-jack { background-color: #fbbf24; }
+.node-boss    #center-jack { background-color: #fb2424; }
+
+/* Per-type colors (same style, different tint).
+   Tweak these to your taste; the goal is subtle hue differences. */
+.node-start .main-container {
+  background-color: #14321e;       /* deep green */
+  border-color: #3d9b5c;
+}
+
+.node-basic .main-container {
+  background-color: #1b2636;       /* deep blue */
+  border-color: #425f89;
+}
+
+.node-hub .main-container {
+  background-color: #241733;       /* deep purple */
+  border-color: #59387f;
+}
+
+.node-end .main-container {
+  background-color: #341a1a;       /* deep red */
+  border-color: #9b4d4d;
+}
+
+.node-debug .main-container {
+  background-color: #2d2512;       /* deep amber */
+  border-color: #927738;
+}
+
+.node-boss .main-container {
+  background-color: #2d1212;       /* deep amber */
+  border-color: #923838;
+}

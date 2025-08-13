@@ -1,0 +1,155 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78545e3986cfce14f80aec554be13a99, type: 3}
+  m_Name: New_Demo2
+  m_EditorClassIdentifier: 
+  m_nodes:
+  - rid: 2036059381359444162
+  - rid: 2036059381359444163
+  - rid: 2036059415770824890
+  - rid: 2036059415770824891
+  - rid: 2036059415770824892
+  - rid: 2036059415770824893
+  - rid: 2036059415770824895
+  m_connections:
+  - inputPort:
+      nodeId: 06d522cb-d8e9-4ae1-b8d3-1d1690362cd9
+      portIndex: 0
+    outputPort:
+      nodeId: 0ba42235-c1fe-4486-a98c-c8b852d8d12a
+      portIndex: 1
+  - inputPort:
+      nodeId: 0ba42235-c1fe-4486-a98c-c8b852d8d12a
+      portIndex: 1
+    outputPort:
+      nodeId: 7017abe8-d165-4ae4-ba68-80d9c053c461
+      portIndex: 0
+  - inputPort:
+      nodeId: 7017abe8-d165-4ae4-ba68-80d9c053c461
+      portIndex: 0
+    outputPort:
+      nodeId: 7f2177d2-58ba-480b-ac06-f2a1b6a793c2
+      portIndex: 1
+  - inputPort:
+      nodeId: 67a60568-4b3b-4758-8a75-05868eaac86b
+      portIndex: 1
+    outputPort:
+      nodeId: 7017abe8-d165-4ae4-ba68-80d9c053c461
+      portIndex: 0
+  - inputPort:
+      nodeId: 0ba42235-c1fe-4486-a98c-c8b852d8d12a
+      portIndex: 0
+    outputPort:
+      nodeId: 7f2177d2-58ba-480b-ac06-f2a1b6a793c2
+      portIndex: 1
+  - inputPort:
+      nodeId: 470d1bc9-59bc-4d28-96aa-3850970e7e6b
+      portIndex: 1
+    outputPort:
+      nodeId: 7017abe8-d165-4ae4-ba68-80d9c053c461
+      portIndex: 0
+  - inputPort:
+      nodeId: 470d1bc9-59bc-4d28-96aa-3850970e7e6b
+      portIndex: 0
+    outputPort:
+      nodeId: 74ec9596-f7cd-4159-b5bd-2b44a52aed47
+      portIndex: 1
+  references:
+    version: 2
+    RefIds:
+    - rid: 2036059381359444162
+      type: {class: StartNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: 06d522cb-d8e9-4ae1-b8d3-1d1690362cd9
+        m_position:
+          serializedVersion: 2
+          x: 119
+          y: -30
+          width: 74.5
+          height: 44
+        typeName: DungeonGraph.StartNode, DungeonGraph.Runtime, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+    - rid: 2036059381359444163
+      type: {class: BasicNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: 0ba42235-c1fe-4486-a98c-c8b852d8d12a
+        m_position:
+          serializedVersion: 2
+          x: 119
+          y: 120
+          width: 198
+          height: 81.5
+        typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+        size: 1
+    - rid: 2036059415770824890
+      type: {class: HubNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: 7017abe8-d165-4ae4-ba68-80d9c053c461
+        m_position:
+          serializedVersion: 2
+          x: 242.5
+          y: 264
+          width: 198
+          height: 81.5
+        typeName: DungeonGraph.HubNode, DungeonGraph.Runtime, Version=0.0.0.0, Culture=neutral,
+          PublicKeyToken=null
+    - rid: 2036059415770824891
+      type: {class: BasicNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: 7f2177d2-58ba-480b-ac06-f2a1b6a793c2
+        m_position:
+          serializedVersion: 2
+          x: -46
+          y: 304.5
+          width: 198
+          height: 81.5
+        typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+        size: 1
+    - rid: 2036059415770824892
+      type: {class: BasicNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: 67a60568-4b3b-4758-8a75-05868eaac86b
+        m_position:
+          serializedVersion: 2
+          x: 349
+          y: 244.5
+          width: 198
+          height: 63.5
+        typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+        size: 1
+    - rid: 2036059415770824893
+      type: {class: EndNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: 74ec9596-f7cd-4159-b5bd-2b44a52aed47
+        m_position:
+          serializedVersion: 2
+          x: 392
+          y: 581.5
+          width: 198
+          height: 81.5
+        typeName: DungeonGraph.EndNode, DungeonGraph.Runtime, Version=0.0.0.0, Culture=neutral,
+          PublicKeyToken=null
+    - rid: 2036059415770824895
+      type: {class: BossNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: 470d1bc9-59bc-4d28-96aa-3850970e7e6b
+        m_position:
+          serializedVersion: 2
+          x: 392
+          y: 437
+          width: 198
+          height: 81.5
+        typeName: DungeonGraph.BossNode, DungeonGraph.Runtime, Version=0.0.0.0, Culture=neutral,
+          PublicKeyToken=null

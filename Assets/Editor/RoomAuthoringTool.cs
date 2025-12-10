@@ -100,7 +100,7 @@ public static class RoomAuthoringTools
         }
 
         // Recompute bounds/doors metadata
-        var rt = go.GetComponent<RoomTemplate>() ?? go.AddComponent<RoomTemplate>();
+        var rt = go.GetComponent<DungeonGraph.RoomTemplate>() ?? go.AddComponent<DungeonGraph.RoomTemplate>();
         rt.Recompute();
     }
 
@@ -112,7 +112,7 @@ public static class RoomAuthoringTools
             EditorUtility.SetDirty(prefab);
             AssetDatabase.SaveAssets();
 
-            var rt = go.GetComponent<RoomTemplate>();
+            var rt = go.GetComponent<DungeonGraph.RoomTemplate>();
             Debug.Log($"Saved room prefab at: <b>{file}</b>\n" +
                       $"World bounds center={rt.worldBounds.center}, size={rt.worldBounds.size}, " +
                       $"tiles={rt.sizeInCells.x}x{rt.sizeInCells.y}");

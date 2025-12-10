@@ -42,17 +42,21 @@
     <UnityVersion>6000.0.48f1</UnityVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Analyzer Include="C:\Users\Ruben\.vscode\extensions\visualstudiotoolsforunity.vstuc-1.1.2\Analyzers\Microsoft.Unity.Analyzers.dll" />
+    <Analyzer Include="C:\Users\Ruben\.vscode\extensions\visualstudiotoolsforunity.vstuc-1.2.0\Analyzers\Microsoft.Unity.Analyzers.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.48f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.SourceGenerators.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.48f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.48f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\Editor\OrganicGeneration.cs" />
     <Compile Include="Assets\Scripts\Editor\DungeonGraphWindowSearchProvider.cs" />
+    <Compile Include="Assets\Scripts\Editor\Composite.cs" />
     <Compile Include="Assets\Scripts\Editor\DungeonGraphEditorNode.cs" />
     <Compile Include="Assets\Scripts\Editor\PortTypes.cs" />
     <Compile Include="Assets\Scripts\Editor\DungeonGraphAssetEditor.cs" />
     <Compile Include="Assets\Scripts\Editor\DungeonGraphView.cs" />
+    <Compile Include="Assets\Scripts\Editor\DungeonGenerator.cs" />
+    <Compile Include="Assets\Scripts\Editor\ConstraintGeneration.cs" />
     <Compile Include="Assets\Scripts\Editor\DungeonGraphEditorWindow.cs" />
   </ItemGroup>
   <ItemGroup>

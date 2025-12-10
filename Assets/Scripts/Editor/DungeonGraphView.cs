@@ -10,6 +10,12 @@ using UnityEditor.UI;
 
 namespace DungeonGraph.Editor
 {
+    public enum GenerationMethod
+    {
+        Organic,
+        ConstraintBased
+    }
+
     public class DungeonGraphView : GraphView
     {
         private DungeonGraphAsset m_dungeonGraph;
@@ -24,6 +30,28 @@ namespace DungeonGraph.Editor
         private DungeonGraphWindowSearchProvider m_searchProvider;
 
         private Blackboard m_toolsBoard;
+        private GenerationMethod m_generationMethod = GenerationMethod.ConstraintBased;
+
+        // Organic generation parameters
+        private float m_areaPlacementFactor = 2.0f;
+        private float m_repulsionFactor = 1.0f;
+        private int m_simulationIterations = 100;
+        private bool m_forceMode = false;
+        private float m_stiffnessFactor = 1.0f;
+        private float m_chaosFactor = 0.0f;
+        private bool m_realTimeSimulation = false;
+        private float m_simulationSpeed = 30f;
+
+        // EditorPrefs keys for persistence
+        private const string PREF_GENERATION_METHOD = "DungeonGraph.GenerationMethod";
+        private const string PREF_AREA_PLACEMENT = "DungeonGraph.AreaPlacement";
+        private const string PREF_REPULSION = "DungeonGraph.Repulsion";
+        private const string PREF_ITERATIONS = "DungeonGraph.Iterations";
+        private const string PREF_FORCE_MODE = "DungeonGraph.ForceMode";
+        private const string PREF_STIFFNESS = "DungeonGraph.Stiffness";
+        private const string PREF_CHAOS = "DungeonGraph.Chaos";
+        private const string PREF_REALTIME_SIMULATION = "DungeonGraph.RealTimeSimulation";
+        private const string PREF_SIMULATION_SPEED = "DungeonGraph.SimulationSpeed";
 
         public DungeonGraphView(SerializedObject serializedObject, DungeonGraphEditorWindow window)
         {
@@ -34,6 +62,9 @@ namespace DungeonGraph.Editor
             m_graphNodes = new List<DungeonGraphEditorNode>();
             m_nodeDictionary = new Dictionary<string, DungeonGraphEditorNode>();
             m_connectionDictionary = new Dictionary<Edge, DungeonGraphConnection>();
+
+            // Load persisted parameters
+            LoadPreferences();
 
             m_searchProvider = ScriptableObject.CreateInstance<DungeonGraphWindowSearchProvider>();
             m_searchProvider.graph = this;
@@ -95,8 +126,8 @@ namespace DungeonGraph.Editor
             // Make it draggable / collapsible / resizable (nice QoL)
             m_toolsBoard.capabilities |= Capabilities.Movable | Capabilities.Collapsible | Capabilities.Resizable;
 
-            // Position and a reasonable default size
-            m_toolsBoard.SetPosition(new Rect(16, 16, 260, 150));
+            // Position and a reasonable default size that fits all parameters
+            m_toolsBoard.SetPosition(new Rect(16, 16, 300, 480));
 
             var addButton = m_toolsBoard.Q<Button>("addButton");
             if (addButton != null)
@@ -106,6 +137,86 @@ namespace DungeonGraph.Editor
             var actions = new BlackboardSection { title = "Actions" };
             m_toolsBoard.Add(actions);
 
+            // Add generation method toggle
+            var methodField = new EnumField("Generation Method", m_generationMethod);
+            methodField.RegisterValueChangedCallback(evt =>
+            {
+                m_generationMethod = (GenerationMethod)evt.newValue;
+                UpdateParameterVisibility();
+                SavePreferences();
+            });
+            actions.Add(methodField);
+
+            // Organic generation parameters (visible only when Organic is selected)
+            var organicParams = new BlackboardSection { title = "Organic Parameters" };
+            organicParams.name = "organic-params";
+
+            var areaField = new FloatField("Area Placement Factor") { value = m_areaPlacementFactor };
+            areaField.RegisterValueChangedCallback(evt =>
+            {
+                m_areaPlacementFactor = evt.newValue;
+                SavePreferences();
+            });
+            organicParams.Add(areaField);
+
+            var repulsionField = new FloatField("Repulsion Factor") { value = m_repulsionFactor };
+            repulsionField.RegisterValueChangedCallback(evt =>
+            {
+                m_repulsionFactor = evt.newValue;
+                SavePreferences();
+            });
+            organicParams.Add(repulsionField);
+
+            var iterationsField = new IntegerField("Simulation Iterations") { value = m_simulationIterations };
+            iterationsField.RegisterValueChangedCallback(evt =>
+            {
+                m_simulationIterations = evt.newValue;
+                SavePreferences();
+            });
+            organicParams.Add(iterationsField);
+
+            var forceModeToggle = new Toggle("Force Mode") { value = m_forceMode };
+            forceModeToggle.RegisterValueChangedCallback(evt =>
+            {
+                m_forceMode = evt.newValue;
+                SavePreferences();
+            });
+            organicParams.Add(forceModeToggle);
+
+            var stiffnessSlider = new Slider("Stiffness Factor", 0.1f, 5.0f) { value = m_stiffnessFactor };
+            stiffnessSlider.RegisterValueChangedCallback(evt =>
+            {
+                m_stiffnessFactor = evt.newValue;
+                SavePreferences();
+            });
+            organicParams.Add(stiffnessSlider);
+
+            var chaosSlider = new Slider("Chaos Factor", 0.0f, 1.0f) { value = m_chaosFactor };
+            chaosSlider.RegisterValueChangedCallback(evt =>
+            {
+                m_chaosFactor = evt.newValue;
+                SavePreferences();
+            });
+            organicParams.Add(chaosSlider);
+
+            var realTimeToggle = new Toggle("Real-Time Simulation") { value = m_realTimeSimulation };
+            realTimeToggle.RegisterValueChangedCallback(evt =>
+            {
+                m_realTimeSimulation = evt.newValue;
+                SavePreferences();
+            });
+            organicParams.Add(realTimeToggle);
+
+            var speedSlider = new Slider("Simulation Speed", 1f, 60f) { value = m_simulationSpeed };
+            speedSlider.RegisterValueChangedCallback(evt =>
+            {
+                m_simulationSpeed = evt.newValue;
+                SavePreferences();
+            });
+            organicParams.Add(speedSlider);
+
+            m_toolsBoard.Add(organicParams);
+
             // The actual button
             var generateBtn = new Button(GenerateDungeon)
             {
@@ -113,22 +224,69 @@ namespace DungeonGraph.Editor
             };
             actions.Add(generateBtn);
 
+            // Initial visibility
+            UpdateParameterVisibility();
+
             Add(m_toolsBoard);
         }
 
+        private void UpdateParameterVisibility()
+        {
+            var organicParams = m_toolsBoard.Q<BlackboardSection>("organic-params");
+            if (organicParams != null)
+            {
+                organicParams.style.display = m_generationMethod == GenerationMethod.Organic
+                    ? DisplayStyle.Flex
+                    : DisplayStyle.None;
+            }
+        }
+
+        private void LoadPreferences()
+        {
+            m_generationMethod = (GenerationMethod)EditorPrefs.GetInt(PREF_GENERATION_METHOD, (int)GenerationMethod.ConstraintBased);
+            m_areaPlacementFactor = EditorPrefs.GetFloat(PREF_AREA_PLACEMENT, 2.0f);
+            m_repulsionFactor = EditorPrefs.GetFloat(PREF_REPULSION, 1.0f);
+            m_simulationIterations = EditorPrefs.GetInt(PREF_ITERATIONS, 100);
+            m_forceMode = EditorPrefs.GetBool(PREF_FORCE_MODE, false);
+            m_stiffnessFactor = EditorPrefs.GetFloat(PREF_STIFFNESS, 1.0f);
+            m_chaosFactor = EditorPrefs.GetFloat(PREF_CHAOS, 0.0f);
+            m_realTimeSimulation = EditorPrefs.GetBool(PREF_REALTIME_SIMULATION, false);
+            m_simulationSpeed = EditorPrefs.GetFloat(PREF_SIMULATION_SPEED, 30f);
+        }
+
+        private void SavePreferences()
+        {
+            EditorPrefs.SetInt(PREF_GENERATION_METHOD, (int)m_generationMethod);
+            EditorPrefs.SetFloat(PREF_AREA_PLACEMENT, m_areaPlacementFactor);
+            EditorPrefs.SetFloat(PREF_REPULSION, m_repulsionFactor);
+            EditorPrefs.SetInt(PREF_ITERATIONS, m_simulationIterations);
+            EditorPrefs.SetBool(PREF_FORCE_MODE, m_forceMode);
+            EditorPrefs.SetFloat(PREF_STIFFNESS, m_stiffnessFactor);
+            EditorPrefs.SetFloat(PREF_CHAOS, m_chaosFactor);
+            EditorPrefs.SetBool(PREF_REALTIME_SIMULATION, m_realTimeSimulation);
+            EditorPrefs.SetFloat(PREF_SIMULATION_SPEED, m_simulationSpeed);
+        }
+
         /// <summary>
-        /// Editor-side traversal: instantiate the graph, Init(), then follow the flow
-        /// using node.OnProcess(...) until it ends or we detect a loop.
+        /// Generate dungeon from the current graph asset
         /// </summary>
         private void GenerateDungeon()
         {
             if (m_dungeonGraph == null)
             {
-                EditorUtility.DisplayDialog("Dungeon Graph", "No graph is loaded.", "OK");
+                Debug.LogWarning("No graph is loaded.");
                 return;
             }
 
-            // Work on a copy so the editor asset isn't mutated by runtime logic.
+            // Destroy previous dungeon if it exists
+            var existingDungeon = GameObject.Find("Generated_Dungeon");
+            if (existingDungeon != null)
+            {
+                GameObject.DestroyImmediate(existingDungeon);
+                Debug.Log("[DungeonGraphView] Destroyed previous dungeon.");
+            }
+
+            // Work on a copy so the editor asset isn't mutated by runtime logic
             var instance = ScriptableObject.Instantiate(m_dungeonGraph);
             try
             {
@@ -136,33 +294,28 @@ namespace DungeonGraph.Editor
                 var start = instance.GetStartNode();
                 if (start == null)
                 {
-                    EditorUtility.DisplayDialog("Dungeon Graph", "No StartNode found in this graph.", "OK");
+                    Debug.LogError("No StartNode found in this graph.");
                     return;
                 }
 
-                var visited = new HashSet<string>();
-                var order   = new List<DungeonGraphNode>();
+                // Call the appropriate dungeon generator based on selected method
+                Debug.Log($"[DungeonGraphView] Starting dungeon generation using {m_generationMethod} method...");
 
-                var node   = start;
-                int safety = 0; // protect against accidental infinite loops
-
-                while (node != null && visited.Add(node.id) && safety++ < 4096)
+                if (m_generationMethod == GenerationMethod.Organic)
                 {
-                    order.Add(node);
-
-                    // Your current flow chooses output index 0 by default (see DungeonGraphNode.OnProcess)
-                    string nextId = node.OnProcess(instance);
-                    if (string.IsNullOrEmpty(nextId))
-                        break;
-
-                    node = instance.GetNode(nextId);
+                    OrganicGeneration.GenerateDungeon(instance, null, m_areaPlacementFactor, m_repulsionFactor,
+                        m_simulationIterations, m_forceMode, m_stiffnessFactor, m_chaosFactor);
+                }
+                else
+                {
+                    ConstraintGeneration.GenerateDungeon(instance);
                 }
 
-                // For now, just log the traversal. Later, pass `order` to your generator.
-                Debug.Log($"[DungeonGraph] Traversal order ({order.Count}): " +
-                          string.Join(" -> ", order.Select(n => n.GetType().Name)));
-
-                // TODO: Hook the actual dungeon generation here, using `order`
+                Debug.Log("[DungeonGraphView] Dungeon generated successfully!");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[DungeonGraphView] Generation failed: {ex.Message}\n{ex.StackTrace}");
             }
             finally
             {

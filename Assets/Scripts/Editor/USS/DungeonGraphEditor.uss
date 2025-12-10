@@ -17,18 +17,42 @@ DungeonGraphView
   border-width: 1px;                  /* ensure visible border */
   /*border-style: solid;*/
   border-color: rgba(0, 0, 0, 0);
+  min-width: 80px;
+  min-height: 60px;
 }
 
 /* Make the title + extension areas opaque too */
-.dungeon-node .title-container,
+.dungeon-node .title-container {
+  background-color: rgba(28, 28, 30, 1);
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 8px;
+  padding-right: 8px;
+  margin-bottom: 8px; /* Space between title and center jack */
+}
+
 .dungeon-node .extension-container {
   background-color: rgba(28, 28, 30, 1);
+  padding-top: 8px;
+  padding-bottom: 4px;
+  padding-left: 6px;
+  padding-right: 6px;
+  margin-top: 8px; /* Space between center jack and extension */
+}
+
+/* Tighten up the title label itself */
+.dungeon-node .title-container > Label {
+  padding: 0px;
+  margin: 0px;
+  font-size: 11px;
 }
 
 /* Center overlay for your hidden, overlapped ports (the container you created in code) */
 .dungeon-node #center-port-container {
   position: absolute;
-  left: 0; right: 0; top: 0; bottom: 0;
+  left: 0; right: 0;
+  top: 30px; /* Offset from top to avoid title overlap */
+  bottom: 0;
   justify-content: center;
   align-items: center;
   display: flex;
@@ -36,8 +60,8 @@ DungeonGraphView
 
 /* The visible jack */
 .dungeon-node #center-jack.jack {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   /* The jack itself is visible; ports inside are invisible and fill this box */
 }
 /* Shapes */
@@ -52,6 +76,21 @@ DungeonGraphView
   opacity: 0;
 }
 
+/* Tighten up property fields in extension container */
+.dungeon-node .extension-container .unity-property-field {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.dungeon-node .extension-container .unity-property-field__label {
+  min-width: 40px;
+  font-size: 10px;
+}
+
+.dungeon-node .extension-container .unity-enum-field__input {
+  font-size: 10px;
+}
+
 /* Colors per node type (adjust to taste) */
 .node-start   #center-jack { background-color: #1db954; }
 .node-basic   #center-jack { background-color: #60a5fa; }
@@ -59,6 +98,22 @@ DungeonGraphView
 .node-end     #center-jack { background-color: #f87171; }
 .node-debug   #center-jack { background-color: #fbbf24; }
 .node-boss    #center-jack { background-color: #fb2424; }
+
+/* Compact nodes without extensions (Start, Hub, Boss, End) */
+.node-start .main-container,
+.node-hub .main-container,
+.node-boss .main-container,
+.node-end .main-container {
+  min-width: 70px;
+  min-height: 50px;
+}
+
+.node-start #center-port-container,
+.node-hub #center-port-container,
+.node-boss #center-port-container,
+.node-end #center-port-container {
+  top: 22px; /* Closer to title for compact nodes */
+}
 
 /* Per-type colors (same style, different tint).
    Tweak these to your taste; the goal is subtle hue differences. */

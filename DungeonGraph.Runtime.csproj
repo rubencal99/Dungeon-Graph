@@ -42,18 +42,26 @@
     <UnityVersion>6000.0.48f1</UnityVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Analyzer Include="C:\Users\Ruben\.vscode\extensions\visualstudiotoolsforunity.vstuc-1.1.2\Analyzers\Microsoft.Unity.Analyzers.dll" />
+    <Analyzer Include="C:\Users\Ruben\.vscode\extensions\visualstudiotoolsforunity.vstuc-1.2.0\Analyzers\Microsoft.Unity.Analyzers.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.48f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.SourceGenerators.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.48f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.48f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\Runtime\Types\EndNode.cs" />
+    <Compile Include="Assets\Scripts\Runtime\RoomTemplate.cs" />
     <Compile Include="Assets\Scripts\Runtime\DungeonGraphConnection.cs" />
     <Compile Include="Assets\Scripts\Runtime\Types\StartNode.cs" />
+    <Compile Include="Assets\Scripts\Runtime\Types\BasicNode.cs" />
+    <Compile Include="Assets\Scripts\Runtime\Types\HubNode.cs" />
+    <Compile Include="Assets\Scripts\Runtime\DungeonSimulationController.cs" />
     <Compile Include="Assets\Scripts\Runtime\Attributes\NodeInfoAttribute.cs" />
+    <Compile Include="Assets\Scripts\Runtime\Attributes\ExposedPropertyAttribute.cs" />
     <Compile Include="Assets\Scripts\Runtime\DungeonGraphObject.cs" />
+    <Compile Include="Assets\Scripts\Runtime\DungeonConnectionVisualizer.cs" />
     <Compile Include="Assets\Scripts\Runtime\DungeonGraphAsset.cs" />
     <Compile Include="Assets\Scripts\Runtime\DungeonGraphNode.cs" />
+    <Compile Include="Assets\Scripts\Runtime\Types\BossNode.cs" />
     <Compile Include="Assets\Scripts\Runtime\Types\DebugLogNode.cs" />
   </ItemGroup>
   <ItemGroup>

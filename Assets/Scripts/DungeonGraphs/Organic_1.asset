@@ -131,10 +131,10 @@ MonoBehaviour:
         m_guid: f0b89371-70bd-4961-8a55-5e8a06fcd1f4
         m_position:
           serializedVersion: 2
-          x: 405.3333
-          y: 717.3333
-          width: 201.33334
-          height: 66.66669
+          x: 464.66666
+          y: 730.6667
+          width: 201.33331
+          height: 66.666626
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1

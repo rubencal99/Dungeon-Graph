@@ -97,6 +97,12 @@ MonoBehaviour:
     outputPort:
       nodeId: 55507245-9e05-4199-a676-4c1df26be581
       portIndex: 1
+  - inputPort:
+      nodeId: 470d1bc9-59bc-4d28-96aa-3850970e7e6b
+      portIndex: 1
+    outputPort:
+      nodeId: 7f2177d2-58ba-480b-ac06-f2a1b6a793c2
+      portIndex: 0
   references:
     version: 2
     RefIds:

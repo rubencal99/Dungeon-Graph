@@ -174,6 +174,35 @@ namespace DungeonGraph.Editor
                 }
             }
 
+            // 7. Setup tilemap system for grid alignment and corridor generation
+            var tilemapSystem = parent.gameObject.GetComponent<DungeonTilemapSystem>();
+            if (tilemapSystem == null)
+            {
+                tilemapSystem = parent.gameObject.AddComponent<DungeonTilemapSystem>();
+                Debug.Log("[OrganicGeneration] Added DungeonTilemapSystem component");
+            }
+
+            // Snap rooms to grid (important for proper tilemap alignment)
+            tilemapSystem.SnapRoomsToGrid(roomInstances);
+
+            // 8. Generate corridors and merge tilemaps if configured
+            if (tilemapSystem.masterTilemap != null && tilemapSystem.corridorTile != null)
+            {
+                // Merge all room tilemaps to the master tilemap
+                tilemapSystem.MergeRoomsToMasterTilemap(roomInstances);
+
+                // Generate corridors between connected rooms
+                // Use direct corridors for organic generation (more natural looking)
+                tilemapSystem.GenerateAllCorridors(graph, roomInstances, useRightAngleCorridors: false);
+
+                Debug.Log("[OrganicGeneration] Tilemap merge and corridor generation complete!");
+            }
+            else
+            {
+                Debug.LogWarning("[OrganicGeneration] Master tilemap or corridor tile not assigned. Skipping corridor generation. " +
+                    "Assign these in the DungeonTilemapSystem component on the Generated_Dungeon object.");
+            }
+
             Debug.Log("[OrganicGeneration] Generation complete!");
         }
 

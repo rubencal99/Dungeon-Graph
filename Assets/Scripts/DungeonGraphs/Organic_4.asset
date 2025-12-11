@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 78545e3986cfce14f80aec554be13a99, type: 3}
-  m_Name: Organic_3
+  m_Name: Organic_4
   m_EditorClassIdentifier: 
   m_nodes:
   - rid: 2036059381359444162
@@ -23,6 +23,8 @@ MonoBehaviour:
   - rid: 1121361366720708673
   - rid: 1121361366720708674
   - rid: 1121361366720708675
+  - rid: 1121361381793202236
+  - rid: 1121361381793202237
   m_connections:
   - inputPort:
       nodeId: 470d1bc9-59bc-4d28-96aa-3850970e7e6b
@@ -55,6 +57,12 @@ MonoBehaviour:
       nodeId: f0b89371-70bd-4961-8a55-5e8a06fcd1f4
       portIndex: 0
   - inputPort:
+      nodeId: 55507245-9e05-4199-a676-4c1df26be581
+      portIndex: 1
+    outputPort:
+      nodeId: dbde3753-86ca-46f4-8f1a-f82d0f2b57e9
+      portIndex: 0
+  - inputPort:
       nodeId: 796a1553-7fc8-45f5-8fe4-9b745fc4483d
       portIndex: 1
     outputPort:
@@ -67,29 +75,41 @@ MonoBehaviour:
       nodeId: 80c39270-1be6-4c42-af58-ada5e9894002
       portIndex: 1
   - inputPort:
-      nodeId: 6b5c1670-d0a3-4724-8280-9f7ee3f2c28b
-      portIndex: 0
-    outputPort:
-      nodeId: 73c50c1d-0b44-487a-9189-c175e36bf372
-      portIndex: 1
-  - inputPort:
       nodeId: 470d1bc9-59bc-4d28-96aa-3850970e7e6b
       portIndex: 1
     outputPort:
       nodeId: 55507245-9e05-4199-a676-4c1df26be581
       portIndex: 0
   - inputPort:
+      nodeId: 3e4e6878-ff73-47d7-a1b7-48237e2aa12b
+      portIndex: 0
+    outputPort:
+      nodeId: 80c39270-1be6-4c42-af58-ada5e9894002
+      portIndex: 1
+  - inputPort:
+      nodeId: 3e4e6878-ff73-47d7-a1b7-48237e2aa12b
+      portIndex: 1
+    outputPort:
+      nodeId: 785d36c0-588c-4f0a-912a-9861cf4110b9
+      portIndex: 0
+  - inputPort:
       nodeId: 470d1bc9-59bc-4d28-96aa-3850970e7e6b
+      portIndex: 1
+    outputPort:
+      nodeId: 6b5c1670-d0a3-4724-8280-9f7ee3f2c28b
+      portIndex: 0
+  - inputPort:
+      nodeId: 73c50c1d-0b44-487a-9189-c175e36bf372
+      portIndex: 1
+    outputPort:
+      nodeId: 785d36c0-588c-4f0a-912a-9861cf4110b9
+      portIndex: 0
+  - inputPort:
+      nodeId: 6b5c1670-d0a3-4724-8280-9f7ee3f2c28b
       portIndex: 1
     outputPort:
       nodeId: dbde3753-86ca-46f4-8f1a-f82d0f2b57e9
       portIndex: 0
-  - inputPort:
-      nodeId: 6b5c1670-d0a3-4724-8280-9f7ee3f2c28b
-      portIndex: 0
-    outputPort:
-      nodeId: f0b89371-70bd-4961-8a55-5e8a06fcd1f4
-      portIndex: 1
   references:
     version: 2
     RefIds:
@@ -150,10 +170,10 @@ MonoBehaviour:
         m_guid: 80c39270-1be6-4c42-af58-ada5e9894002
         m_position:
           serializedVersion: 2
-          x: -348
-          y: 289.33334
-          width: 201.33333
-          height: 66.66666
+          x: -448.6667
+          y: 308.66666
+          width: 201.33334
+          height: 66.66669
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1
@@ -163,10 +183,10 @@ MonoBehaviour:
         m_guid: 73c50c1d-0b44-487a-9189-c175e36bf372
         m_position:
           serializedVersion: 2
-          x: -448.6667
-          y: 450.66666
-          width: 201.33334
-          height: 66.66666
+          x: -348
+          y: 506
+          width: 201.33333
+          height: 66.66669
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1
@@ -180,6 +200,32 @@ MonoBehaviour:
           y: 661.3333
           width: 201.33334
           height: 66.66669
+        typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+        size: 1
+    - rid: 1121361381793202236
+      type: {class: BasicNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: 785d36c0-588c-4f0a-912a-9861cf4110b9
+        m_position:
+          serializedVersion: 2
+          x: -628.6666
+          y: 628
+          width: 201.33331
+          height: 66.66669
+        typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+        size: 1
+    - rid: 1121361381793202237
+      type: {class: BasicNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: 3e4e6878-ff73-47d7-a1b7-48237e2aa12b
+        m_position:
+          serializedVersion: 2
+          x: -582.78156
+          y: 447.005
+          width: 0
+          height: 0
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1

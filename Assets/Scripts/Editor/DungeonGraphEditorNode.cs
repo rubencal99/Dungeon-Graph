@@ -123,19 +123,19 @@ namespace DungeonGraph.Editor
         // call this from the ctor instead of CreateLinkPort();
         private void CreateLinkPorts()
         {
-            // We’ll attach to the jack we created in the ctor
+            // We'll attach to the jack we created in the ctor
             var jack = m_centerPortContainer.Q<VisualElement>("center-jack");
 
-            // OUTPUT — visible jack is for starting drags
+            // OUTPUT — visible jack is for starting drags (HORIZONTAL for tangent connections)
             m_linkOut = InstantiatePort(
-                Orientation.Vertical, Direction.Output, Port.Capacity.Multi, typeof(PortTypes.FlowPort));
+                Orientation.Horizontal, Direction.Output, Port.Capacity.Multi, typeof(PortTypes.FlowPort));
             m_linkOut.portName = string.Empty;
             m_ports.Add(m_linkOut);
             jack.Add(m_linkOut);
 
-            // INPUT — invisible drop target (enabled during drag by the GraphView)
+            // INPUT — invisible drop target (enabled during drag by the GraphView) (HORIZONTAL for tangent connections)
             m_linkIn = InstantiatePort(
-                Orientation.Vertical, Direction.Input, Port.Capacity.Multi, typeof(PortTypes.FlowPort));
+                Orientation.Horizontal, Direction.Input, Port.Capacity.Multi, typeof(PortTypes.FlowPort));
             m_linkIn.portName = string.Empty;
             m_ports.Add(m_linkIn);
             jack.Add(m_linkIn);

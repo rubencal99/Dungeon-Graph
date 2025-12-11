@@ -56,6 +56,7 @@
     <Compile Include="Assets\Scripts\Editor\DungeonGraphAssetEditor.cs" />
     <Compile Include="Assets\Scripts\Editor\DungeonGraphView.cs" />
     <Compile Include="Assets\Scripts\Editor\DungeonGenerator.cs" />
+    <Compile Include="Assets\Scripts\Editor\DungeonTilemapSystemEditor.cs" />
     <Compile Include="Assets\Scripts\Editor\ConstraintGeneration.cs" />
     <Compile Include="Assets\Scripts\Editor\DungeonGraphEditorWindow.cs" />
   </ItemGroup>

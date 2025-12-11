@@ -56,6 +56,7 @@
     <Compile Include="Assets\Scripts\Runtime\Types\HubNode.cs" />
     <Compile Include="Assets\Scripts\Runtime\DungeonSimulationController.cs" />
     <Compile Include="Assets\Scripts\Runtime\Attributes\NodeInfoAttribute.cs" />
+    <Compile Include="Assets\Scripts\Runtime\DungeonTilemapSystem.cs" />
     <Compile Include="Assets\Scripts\Runtime\Attributes\ExposedPropertyAttribute.cs" />
     <Compile Include="Assets\Scripts\Runtime\DungeonGraphObject.cs" />
     <Compile Include="Assets\Scripts\Runtime\DungeonConnectionVisualizer.cs" />

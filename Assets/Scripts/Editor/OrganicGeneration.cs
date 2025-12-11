@@ -156,9 +156,9 @@ namespace DungeonGraph.Editor
                     simulationSpeed = simulationSpeed
                 };
 
-                controller.StartSimulation(graph, roomInstances, roomPositions, nodeBounds, simParams);
                 Debug.Log("[OrganicGeneration] Real-time simulation started! Tilemap merge will occur after simulation completes.");
-
+                controller.StartSimulation(graph, roomInstances, roomPositions, nodeBounds, simParams);
+                
                 // Controller will handle position updates and post-simulation setup
                 // Early return - rest of the setup happens after simulation
                 return;
@@ -297,17 +297,34 @@ namespace DungeonGraph.Editor
             }
 
             // 3. Snap rooms to grid (important for proper tilemap alignment)
+            Debug.Log("[OrganicGeneration] Snapping rooms to grid...");
             tilemapSystem.SnapRoomsToGrid(roomInstances);
 
             // 4. Merge tilemaps if master tilemap is available
             if (tilemapSystem.masterTilemap != null)
             {
+                Debug.Log("[OrganicGeneration] Merging tilemaps...");
                 tilemapSystem.MergeRoomsToMasterTilemap(roomInstances);
                 Debug.Log("[OrganicGeneration] Tilemap merge complete!");
             }
             else
             {
                 Debug.LogWarning("[OrganicGeneration] Master tilemap not found. Tag a tilemap with 'Dungeon' to enable tilemap merging.");
+            }
+
+            // 5. Generate corridors automatically after real-time simulation
+            if (tilemapSystem.corridorTile != null && tilemapSystem.masterTilemap != null)
+            {
+                Debug.Log("[OrganicGeneration] Auto-generating corridors after simulation...");
+                tilemapSystem.GenerateAllCorridors(graph, roomInstances, useRightAngleCorridors: false);
+                Debug.Log("[OrganicGeneration] Corridor generation complete!");
+            }
+            else
+            {
+                if (tilemapSystem.corridorTile == null)
+                {
+                    Debug.LogWarning("[OrganicGeneration] Corridor tile not assigned. Skipping auto-corridor generation.");
+                }
             }
 
             Debug.Log("[OrganicGeneration] Post-simulation setup complete!");

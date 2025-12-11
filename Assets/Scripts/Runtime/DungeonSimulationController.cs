@@ -218,21 +218,79 @@ namespace DungeonGraph
             m_isSimulating = false;
             Debug.Log("[DungeonSimulationController] Simulation complete!");
 
-            // Call post-simulation setup to handle visualization, grid snapping, and tilemap merging
-            #if UNITY_EDITOR
-            var postSimMethod = System.Type.GetType("DungeonGraph.Editor.OrganicGeneration, Assembly-CSharp-Editor");
-            if (postSimMethod != null)
+            // Call post-simulation setup using reflection (works in Editor play mode)
+            Debug.Log("[DungeonSimulationController] Attempting to call PostSimulationSetup via reflection...");
+            try
             {
-                var method = postSimMethod.GetMethod("PostSimulationSetup",
-                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                if (method != null)
+                // Try multiple assembly names
+                string[] assemblyNames = new string[]
                 {
-                    method.Invoke(null, new object[] { m_graph, gameObject });
+                    "Assembly-CSharp-Editor",
+                    "Assembly-CSharp-Editor-firstpass",
+                    "DungeonGraph.Editor"
+                };
+
+                System.Type postSimType = null;
+                foreach (var asmName in assemblyNames)
+                {
+                    string typeName = $"DungeonGraph.Editor.OrganicGeneration, {asmName}";
+                    postSimType = System.Type.GetType(typeName);
+                    if (postSimType != null)
+                    {
+                        Debug.Log($"[DungeonSimulationController] Found type using assembly: {asmName}");
+                        break;
+                    }
+                }
+
+                if (postSimType != null)
+                {
+                    var method = postSimType.GetMethod("PostSimulationSetup",
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    if (method != null)
+                    {
+                        Debug.Log($"[DungeonSimulationController] About to invoke PostSimulationSetup with graph={(m_graph != null ? "valid" : "NULL")} and gameObject={(gameObject != null ? gameObject.name : "NULL")}");
+
+                        if (m_graph == null)
+                        {
+                            Debug.LogError("[DungeonSimulationController] m_graph is NULL!");
+                        }
+                        if (gameObject == null)
+                        {
+                            Debug.LogError("[DungeonSimulationController] gameObject is NULL!");
+                        }
+
+                        Debug.Log("[DungeonSimulationController] Invoking PostSimulationSetup...");
+                        method.Invoke(null, new object[] { m_graph, gameObject });
+                        Debug.Log("[DungeonSimulationController] PostSimulationSetup completed!");
+
+                        // Clean up the graph instance after post-simulation setup
+                        if (m_graph != null)
+                        {
+                            Debug.Log("[DungeonSimulationController] Destroying graph instance after post-simulation setup");
+                            UnityEngine.Object.DestroyImmediate(m_graph);
+                            m_graph = null;
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogError("[DungeonSimulationController] PostSimulationSetup method not found!");
+                    }
+                }
+                else
+                {
+                    Debug.LogError("[DungeonSimulationController] OrganicGeneration type not found in any assembly!");
                 }
             }
-            #endif
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[DungeonSimulationController] Error calling PostSimulationSetup: {ex.Message}\n{ex.StackTrace}");
+            }
+
+            // Wait one frame to ensure post-simulation setup completes
+            yield return null;
 
             // Destroy this controller component after completion so corridor generation knows simulation is done
+            Debug.Log("[DungeonSimulationController] Destroying controller component...");
             Destroy(this);
         }
 

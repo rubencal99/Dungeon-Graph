@@ -385,9 +385,17 @@ namespace DungeonGraph.Editor
             }
             finally
             {
-                // Clean up the temporary instance
-                if (instance != null)
+                // Clean up the temporary instance ONLY if NOT using real-time simulation
+                // Real-time simulation needs the graph to persist until simulation completes
+                if (instance != null && !m_realTimeSimulation)
+                {
                     ScriptableObject.DestroyImmediate(instance);
+                    Debug.Log("[DungeonGraphView] Destroyed graph instance after instant generation");
+                }
+                else if (instance != null && m_realTimeSimulation)
+                {
+                    Debug.Log("[DungeonGraphView] Graph instance will be preserved for real-time simulation");
+                }
             }
         }
 

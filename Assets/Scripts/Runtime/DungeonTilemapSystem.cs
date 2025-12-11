@@ -51,6 +51,8 @@ namespace DungeonGraph
         /// </summary>
         public void SnapRoomsToGrid(Dictionary<string, GameObject> roomInstances)
         {
+            Debug.Log($"[DungeonTilemapSystem] SnapRoomsToGrid called with {roomInstances.Count} rooms");
+
             foreach (var kvp in roomInstances)
             {
                 GameObject roomObj = kvp.Value;
@@ -63,6 +65,7 @@ namespace DungeonGraph
                     0f
                 );
 
+                Debug.Log($"[DungeonTilemapSystem] Snapping {roomObj.name}: {currentPos} -> {snappedPos}");
                 roomObj.transform.position = snappedPos;
             }
 

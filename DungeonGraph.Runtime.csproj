@@ -52,6 +52,7 @@
     <Compile Include="Assets\Scripts\Runtime\RoomTemplate.cs" />
     <Compile Include="Assets\Scripts\Runtime\DungeonGraphConnection.cs" />
     <Compile Include="Assets\Scripts\Runtime\Types\StartNode.cs" />
+    <Compile Include="Assets\Scripts\Runtime\RoomNodeReference.cs" />
     <Compile Include="Assets\Scripts\Runtime\Types\BasicNode.cs" />
     <Compile Include="Assets\Scripts\Runtime\Types\HubNode.cs" />
     <Compile Include="Assets\Scripts\Runtime\DungeonSimulationController.cs" />

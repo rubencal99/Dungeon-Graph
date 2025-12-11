@@ -9,8 +9,8 @@ namespace DungeonGraph.Editor
     /// </summary>
     public static class ConstraintGeneration
     {
-        // Main entry point for dungeon generation
-        public static void GenerateDungeon(DungeonGraphAsset graph, Transform parent = null)
+        // Main entry point for room generation (without corridors)
+        public static void GenerateRooms(DungeonGraphAsset graph, Transform parent = null)
         {
             if (graph == null)
             {
@@ -111,7 +111,7 @@ namespace DungeonGraph.Editor
                 }
             }
 
-            // Setup tilemap system for grid alignment and corridor generation
+            // Setup tilemap system for grid alignment
             var tilemapSystem = parent.gameObject.GetComponent<DungeonGraph.DungeonTilemapSystem>();
             if (tilemapSystem == null)
             {
@@ -122,25 +122,79 @@ namespace DungeonGraph.Editor
             // Snap rooms to grid (important for proper tilemap alignment)
             tilemapSystem.SnapRoomsToGrid(allRoomInstances);
 
-            // Generate corridors and merge tilemaps if configured
-            if (tilemapSystem.masterTilemap != null && tilemapSystem.corridorTile != null)
+            // Try to find and assign master tilemap by tag
+            if (tilemapSystem.masterTilemap == null)
             {
-                // Merge all room tilemaps to the master tilemap
+                tilemapSystem.FindMasterTilemap();
+            }
+
+            // Merge tilemaps if master tilemap is available
+            if (tilemapSystem.masterTilemap != null)
+            {
                 tilemapSystem.MergeRoomsToMasterTilemap(allRoomInstances);
-
-                // Generate corridors between connected rooms
-                // Use right-angle corridors for constraint generation (more structured)
-                tilemapSystem.GenerateAllCorridors(graph, allRoomInstances, useRightAngleCorridors: true);
-
-                Debug.Log("[ConstraintGeneration] Tilemap merge and corridor generation complete!");
+                Debug.Log("[ConstraintGeneration] Tilemap merge complete!");
             }
             else
             {
-                Debug.LogWarning("[ConstraintGeneration] Master tilemap or corridor tile not assigned. Skipping corridor generation. " +
-                    "Assign these in the DungeonTilemapSystem component on the Generated_Dungeon object.");
+                Debug.LogWarning("[ConstraintGeneration] Master tilemap not found. Tag a tilemap with 'Dungeon' to enable tilemap merging.");
             }
 
-            Debug.Log("[ConstraintGeneration] Generation complete!");
+            Debug.Log("[ConstraintGeneration] Room generation complete!");
+        }
+
+        /// <summary>
+        /// Generate corridors for an existing dungeon
+        /// </summary>
+        public static void GenerateCorridors(DungeonGraphAsset graph, GameObject dungeonParent)
+        {
+            if (graph == null)
+            {
+                Debug.LogError("[ConstraintGeneration] Cannot generate corridors: graph is null");
+                return;
+            }
+
+            if (dungeonParent == null)
+            {
+                Debug.LogError("[ConstraintGeneration] Cannot generate corridors: dungeon parent is null");
+                return;
+            }
+
+            // Get tilemap system
+            var tilemapSystem = dungeonParent.GetComponent<DungeonGraph.DungeonTilemapSystem>();
+            if (tilemapSystem == null)
+            {
+                Debug.LogError("[ConstraintGeneration] No DungeonTilemapSystem found on dungeon parent!");
+                return;
+            }
+
+            // Find all room instances
+            var roomInstances = new Dictionary<string, GameObject>();
+            var roomTemplates = dungeonParent.GetComponentsInChildren<DungeonGraph.RoomTemplate>();
+
+            foreach (var template in roomTemplates)
+            {
+                // Try to match room GameObjects to graph nodes
+                foreach (var node in graph.Nodes)
+                {
+                    string nodeTypeName = node.GetType().Name.Replace("Node", "");
+                    if (template.gameObject.name.Contains(nodeTypeName))
+                    {
+                        roomInstances[node.id] = template.gameObject;
+                        break;
+                    }
+                }
+            }
+
+            if (roomInstances.Count == 0)
+            {
+                Debug.LogError("[ConstraintGeneration] No room instances found! Make sure rooms are children of the dungeon parent.");
+                return;
+            }
+
+            // Generate corridors (right-angle corridors for constraint generation)
+            tilemapSystem.GenerateAllCorridors(graph, roomInstances, useRightAngleCorridors: true);
+
+            Debug.Log($"[ConstraintGeneration] Generated corridors for {roomInstances.Count} rooms!");
         }
 
         // Find all loops (cycles) in the graph

@@ -10,7 +10,7 @@ namespace DungeonGraph.Editor
     /// </summary>
     public static class OrganicGeneration
     {
-        public static void GenerateDungeon(DungeonGraphAsset graph, Transform parent = null,
+        public static void GenerateRooms(DungeonGraphAsset graph, Transform parent = null,
             float areaPlacementFactor = 2.0f, float repulsionFactor = 1.0f, int simulationIterations = 100,
             bool forceMode = false, float stiffnessFactor = 1.0f, float chaosFactor = 0.0f,
             bool realTimeSimulation = false, float simulationSpeed = 30f)
@@ -95,6 +95,54 @@ namespace DungeonGraph.Editor
                     }
                 }
 
+                // Setup tilemap system before simulation (but don't merge yet)
+                var realtimeTilemapSystem = parent.gameObject.GetComponent<DungeonTilemapSystem>();
+                if (realtimeTilemapSystem == null)
+                {
+                    realtimeTilemapSystem = parent.gameObject.AddComponent<DungeonTilemapSystem>();
+                    Debug.Log("[OrganicGeneration] Added DungeonTilemapSystem component");
+                }
+
+                // Try to find and assign master tilemap by tag
+                if (realtimeTilemapSystem.masterTilemap == null)
+                {
+                    realtimeTilemapSystem.FindMasterTilemap();
+                }
+
+                // Add debug visualization before simulation so connections are visible during simulation
+                var realtimeVisualizer = parent.gameObject.AddComponent<DungeonConnectionVisualizer>();
+                realtimeVisualizer.connections = new List<(GameObject, GameObject)>();
+                realtimeVisualizer.rooms = new List<DungeonConnectionVisualizer.RoomInfo>();
+
+                // Populate room info with colors
+                foreach (var node in graph.Nodes)
+                {
+                    if (roomInstances.ContainsKey(node.id))
+                    {
+                        string typeName = node.GetType().Name.Replace("Node", "");
+                        Color nodeColor = DungeonConnectionVisualizer.GetColorForNodeType(typeName);
+
+                        realtimeVisualizer.rooms.Add(new DungeonConnectionVisualizer.RoomInfo
+                        {
+                            room = roomInstances[node.id],
+                            typeName = typeName,
+                            color = nodeColor
+                        });
+                    }
+                }
+
+                // Populate connections
+                foreach (var conn in graph.Connections)
+                {
+                    if (roomInstances.ContainsKey(conn.inputPort.nodeId) &&
+                        roomInstances.ContainsKey(conn.outputPort.nodeId))
+                    {
+                        var roomA = roomInstances[conn.inputPort.nodeId];
+                        var roomB = roomInstances[conn.outputPort.nodeId];
+                        realtimeVisualizer.connections.Add((roomA, roomB));
+                    }
+                }
+
                 // Now start the simulation controller
                 var controller = parent.gameObject.AddComponent<DungeonSimulationController>();
                 var simParams = new DungeonSimulationController.SimulationParameters
@@ -109,9 +157,11 @@ namespace DungeonGraph.Editor
                 };
 
                 controller.StartSimulation(graph, roomInstances, roomPositions, nodeBounds, simParams);
-                Debug.Log("[OrganicGeneration] Real-time simulation started!");
+                Debug.Log("[OrganicGeneration] Real-time simulation started! Tilemap merge will occur after simulation completes.");
 
-                // Controller will handle position updates from here
+                // Controller will handle position updates and post-simulation setup
+                // Early return - rest of the setup happens after simulation
+                return;
             }
             else
             {
@@ -140,7 +190,7 @@ namespace DungeonGraph.Editor
                 }
             }
 
-            // 6. Add debug visualization
+            // 6. Add debug visualization (for instant mode only)
             var visualizer = parent.gameObject.AddComponent<DungeonConnectionVisualizer>();
             visualizer.connections = new List<(GameObject, GameObject)>();
             visualizer.rooms = new List<DungeonConnectionVisualizer.RoomInfo>();
@@ -174,7 +224,7 @@ namespace DungeonGraph.Editor
                 }
             }
 
-            // 7. Setup tilemap system for grid alignment and corridor generation
+            // 7. Setup tilemap system for grid alignment
             var tilemapSystem = parent.gameObject.GetComponent<DungeonTilemapSystem>();
             if (tilemapSystem == null)
             {
@@ -185,25 +235,140 @@ namespace DungeonGraph.Editor
             // Snap rooms to grid (important for proper tilemap alignment)
             tilemapSystem.SnapRoomsToGrid(roomInstances);
 
-            // 8. Generate corridors and merge tilemaps if configured
-            if (tilemapSystem.masterTilemap != null && tilemapSystem.corridorTile != null)
+            // Try to find and assign master tilemap by tag
+            if (tilemapSystem.masterTilemap == null)
             {
-                // Merge all room tilemaps to the master tilemap
+                tilemapSystem.FindMasterTilemap();
+            }
+
+            // 8. Merge tilemaps if master tilemap is available
+            if (tilemapSystem.masterTilemap != null)
+            {
                 tilemapSystem.MergeRoomsToMasterTilemap(roomInstances);
-
-                // Generate corridors between connected rooms
-                // Use direct corridors for organic generation (more natural looking)
-                tilemapSystem.GenerateAllCorridors(graph, roomInstances, useRightAngleCorridors: false);
-
-                Debug.Log("[OrganicGeneration] Tilemap merge and corridor generation complete!");
+                Debug.Log("[OrganicGeneration] Tilemap merge complete!");
             }
             else
             {
-                Debug.LogWarning("[OrganicGeneration] Master tilemap or corridor tile not assigned. Skipping corridor generation. " +
-                    "Assign these in the DungeonTilemapSystem component on the Generated_Dungeon object.");
+                Debug.LogWarning("[OrganicGeneration] Master tilemap not found. Tag a tilemap with 'Dungeon' to enable tilemap merging.");
             }
 
-            Debug.Log("[OrganicGeneration] Generation complete!");
+            Debug.Log("[OrganicGeneration] Room generation complete!");
+        }
+
+        /// <summary>
+        /// Called after real-time simulation completes to finalize room setup
+        /// </summary>
+        public static void PostSimulationSetup(DungeonGraphAsset graph, GameObject dungeonParent)
+        {
+            if (graph == null || dungeonParent == null)
+            {
+                Debug.LogError("[OrganicGeneration] Cannot perform post-simulation setup: graph or parent is null");
+                return;
+            }
+
+            Debug.Log("[OrganicGeneration] Starting post-simulation setup...");
+
+            // Find all room instances using RoomNodeReference components
+            var roomInstances = new Dictionary<string, GameObject>();
+            var roomReferences = dungeonParent.GetComponentsInChildren<RoomNodeReference>();
+
+            foreach (var roomRef in roomReferences)
+            {
+                if (!string.IsNullOrEmpty(roomRef.nodeId))
+                {
+                    roomInstances[roomRef.nodeId] = roomRef.gameObject;
+                }
+            }
+
+            // 1. Visualizer should already exist from pre-simulation setup
+            // Just verify it's there
+            var visualizer = dungeonParent.GetComponent<DungeonConnectionVisualizer>();
+            if (visualizer == null)
+            {
+                Debug.LogWarning("[OrganicGeneration] Visualizer not found during post-simulation setup. This is unexpected.");
+            }
+
+            // 2. Get or setup tilemap system
+            var tilemapSystem = dungeonParent.GetComponent<DungeonTilemapSystem>();
+            if (tilemapSystem == null)
+            {
+                Debug.LogError("[OrganicGeneration] No DungeonTilemapSystem found! This should have been setup before simulation.");
+                return;
+            }
+
+            // 3. Snap rooms to grid (important for proper tilemap alignment)
+            tilemapSystem.SnapRoomsToGrid(roomInstances);
+
+            // 4. Merge tilemaps if master tilemap is available
+            if (tilemapSystem.masterTilemap != null)
+            {
+                tilemapSystem.MergeRoomsToMasterTilemap(roomInstances);
+                Debug.Log("[OrganicGeneration] Tilemap merge complete!");
+            }
+            else
+            {
+                Debug.LogWarning("[OrganicGeneration] Master tilemap not found. Tag a tilemap with 'Dungeon' to enable tilemap merging.");
+            }
+
+            Debug.Log("[OrganicGeneration] Post-simulation setup complete!");
+        }
+
+        /// <summary>
+        /// Generate corridors for an existing dungeon
+        /// </summary>
+        public static void GenerateCorridors(DungeonGraphAsset graph, GameObject dungeonParent)
+        {
+            if (graph == null)
+            {
+                Debug.LogError("[OrganicGeneration] Cannot generate corridors: graph is null");
+                return;
+            }
+
+            if (dungeonParent == null)
+            {
+                Debug.LogError("[OrganicGeneration] Cannot generate corridors: dungeon parent is null");
+                return;
+            }
+
+            // Get tilemap system
+            var tilemapSystem = dungeonParent.GetComponent<DungeonTilemapSystem>();
+            if (tilemapSystem == null)
+            {
+                Debug.LogError("[OrganicGeneration] No DungeonTilemapSystem found on dungeon parent!");
+                return;
+            }
+
+            // Find all room instances using RoomNodeReference components
+            var roomInstances = new Dictionary<string, GameObject>();
+            var roomReferences = dungeonParent.GetComponentsInChildren<RoomNodeReference>();
+
+            Debug.Log($"[OrganicGeneration] Found {roomReferences.Length} RoomNodeReference components");
+
+            foreach (var roomRef in roomReferences)
+            {
+                if (!string.IsNullOrEmpty(roomRef.nodeId))
+                {
+                    roomInstances[roomRef.nodeId] = roomRef.gameObject;
+                    Debug.Log($"[OrganicGeneration] Mapped room: {roomRef.gameObject.name} -> nodeId: {roomRef.nodeId}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[OrganicGeneration] RoomNodeReference on {roomRef.gameObject.name} has empty nodeId!");
+                }
+            }
+
+            if (roomInstances.Count == 0)
+            {
+                Debug.LogError("[OrganicGeneration] No room instances found! Make sure rooms are children of the dungeon parent.");
+                return;
+            }
+
+            Debug.Log($"[OrganicGeneration] Successfully mapped {roomInstances.Count} rooms for corridor generation");
+
+            // Generate corridors (direct corridors for organic generation)
+            tilemapSystem.GenerateAllCorridors(graph, roomInstances, useRightAngleCorridors: false);
+
+            Debug.Log($"[OrganicGeneration] Generated corridors for {roomInstances.Count} rooms!");
         }
 
         // Calculate shortest path distances between all node pairs
@@ -466,6 +631,11 @@ namespace DungeonGraph.Editor
 
             string simpleType = typeName.Replace("Node", "");
             roomObj.name = $"{simpleType} Room";
+
+            // Add node reference component for corridor generation
+            var nodeRef = roomObj.AddComponent<RoomNodeReference>();
+            nodeRef.nodeId = node.id;
+            nodeRef.nodeTypeName = simpleType;
 
             return roomObj;
         }

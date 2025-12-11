@@ -20,6 +20,33 @@ namespace DungeonGraph
         public Tilemap masterTilemap; // The unified tilemap for all rooms
 
         /// <summary>
+        /// Automatically find and assign the master tilemap by searching for a tilemap tagged "Dungeon"
+        /// </summary>
+        public bool FindMasterTilemap()
+        {
+            GameObject dungeonObject = GameObject.FindGameObjectWithTag("Dungeon");
+            if (dungeonObject != null)
+            {
+                masterTilemap = dungeonObject.GetComponent<Tilemap>();
+                if (masterTilemap != null)
+                {
+                    Debug.Log($"[DungeonTilemapSystem] Found master tilemap: {masterTilemap.name}");
+                    return true;
+                }
+                else
+                {
+                    Debug.LogWarning($"[DungeonTilemapSystem] GameObject with 'Dungeon' tag found, but it has no Tilemap component!");
+                    return false;
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[DungeonTilemapSystem] No GameObject with 'Dungeon' tag found! Please tag your master tilemap.");
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Snap all room positions to a universal grid
         /// </summary>
         public void SnapRoomsToGrid(Dictionary<string, GameObject> roomInstances)

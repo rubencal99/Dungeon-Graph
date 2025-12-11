@@ -217,6 +217,23 @@ namespace DungeonGraph
 
             m_isSimulating = false;
             Debug.Log("[DungeonSimulationController] Simulation complete!");
+
+            // Call post-simulation setup to handle visualization, grid snapping, and tilemap merging
+            #if UNITY_EDITOR
+            var postSimMethod = System.Type.GetType("DungeonGraph.Editor.OrganicGeneration, Assembly-CSharp-Editor");
+            if (postSimMethod != null)
+            {
+                var method = postSimMethod.GetMethod("PostSimulationSetup",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                if (method != null)
+                {
+                    method.Invoke(null, new object[] { m_graph, gameObject });
+                }
+            }
+            #endif
+
+            // Destroy this controller component after completion so corridor generation knows simulation is done
+            Destroy(this);
         }
 
         private void Update()

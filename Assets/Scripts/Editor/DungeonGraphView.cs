@@ -10,12 +10,6 @@ using UnityEditor.UI;
 
 namespace DungeonGraph.Editor
 {
-    public enum GenerationMethod
-    {
-        Organic,
-        ConstraintBased
-    }
-
     public class DungeonGraphView : GraphView
     {
         private DungeonGraphAsset m_dungeonGraph;
@@ -30,7 +24,6 @@ namespace DungeonGraph.Editor
         private DungeonGraphWindowSearchProvider m_searchProvider;
 
         private Blackboard m_toolsBoard;
-        private GenerationMethod m_generationMethod = GenerationMethod.ConstraintBased;
 
         // Organic generation parameters
         private float m_areaPlacementFactor = 2.0f;
@@ -42,8 +35,11 @@ namespace DungeonGraph.Editor
         private bool m_realTimeSimulation = false;
         private float m_simulationSpeed = 10f;
 
+        // Corridor generation parameters
+        private UnityEngine.Tilemaps.TileBase m_corridorTile = null;
+        private int m_corridorWidth = 2;
+
         // EditorPrefs keys for persistence
-        private const string PREF_GENERATION_METHOD = "DungeonGraph.GenerationMethod";
         private const string PREF_AREA_PLACEMENT = "DungeonGraph.AreaPlacement";
         private const string PREF_REPULSION = "DungeonGraph.Repulsion";
         private const string PREF_ITERATIONS = "DungeonGraph.Iterations";
@@ -52,6 +48,8 @@ namespace DungeonGraph.Editor
         private const string PREF_CHAOS = "DungeonGraph.Chaos";
         private const string PREF_REALTIME_SIMULATION = "DungeonGraph.RealTimeSimulation";
         private const string PREF_SIMULATION_SPEED = "DungeonGraph.SimulationSpeed";
+        private const string PREF_CORRIDOR_TILE = "DungeonGraph.CorridorTile";
+        private const string PREF_CORRIDOR_WIDTH = "DungeonGraph.CorridorWidth";
 
         public DungeonGraphView(SerializedObject serializedObject, DungeonGraphEditorWindow window)
         {
@@ -126,8 +124,8 @@ namespace DungeonGraph.Editor
             // Make it draggable / collapsible / resizable (nice QoL)
             m_toolsBoard.capabilities |= Capabilities.Movable | Capabilities.Collapsible | Capabilities.Resizable;
 
-            // Position and a reasonable default size that fits all parameters
-            m_toolsBoard.SetPosition(new Rect(16, 16, 300, 480));
+            // Position and a reasonable default size that fits all parameters and buttons
+            m_toolsBoard.SetPosition(new Rect(16, 16, 300, 600));
 
             var addButton = m_toolsBoard.Q<Button>("addButton");
             if (addButton != null)
@@ -137,17 +135,7 @@ namespace DungeonGraph.Editor
             var actions = new BlackboardSection { title = "Actions" };
             m_toolsBoard.Add(actions);
 
-            // Add generation method toggle
-            var methodField = new EnumField("Generation Method", m_generationMethod);
-            methodField.RegisterValueChangedCallback(evt =>
-            {
-                m_generationMethod = (GenerationMethod)evt.newValue;
-                UpdateParameterVisibility();
-                SavePreferences();
-            });
-            actions.Add(methodField);
-
-            // Organic generation parameters (visible only when Organic is selected)
+            // Organic generation parameters
             var organicParams = new BlackboardSection { title = "Organic Parameters" };
             organicParams.name = "organic-params";
 
@@ -218,33 +206,69 @@ namespace DungeonGraph.Editor
 
             m_toolsBoard.Add(organicParams);
 
-            // The actual button
-            var generateBtn = new Button(GenerateDungeon)
+            // Corridor parameters section
+            var corridorParams = new BlackboardSection { title = "Corridor Settings" };
+
+            var corridorTileField = new ObjectField("Corridor Tile")
+            {
+                objectType = typeof(UnityEngine.Tilemaps.TileBase),
+                value = m_corridorTile
+            };
+            corridorTileField.RegisterValueChangedCallback(evt =>
+            {
+                m_corridorTile = evt.newValue as UnityEngine.Tilemaps.TileBase;
+                SavePreferences();
+            });
+            corridorParams.Add(corridorTileField);
+
+            var corridorWidthField = new IntegerField("Corridor Width") { value = m_corridorWidth };
+            corridorWidthField.RegisterValueChangedCallback(evt =>
+            {
+                m_corridorWidth = evt.newValue;
+                SavePreferences();
+            });
+            corridorParams.Add(corridorWidthField);
+
+            m_toolsBoard.Add(corridorParams);
+
+            // Generation buttons
+            var generateDungeonBtn = new Button(GenerateDungeon)
             {
                 text = "Generate Dungeon"
             };
-            actions.Add(generateBtn);
+            generateDungeonBtn.style.height = 35;
+            generateDungeonBtn.style.marginBottom = 6;
+            actions.Add(generateDungeonBtn);
 
-            // Initial visibility
-            UpdateParameterVisibility();
+            // Side-by-side button container
+            var buttonRow = new VisualElement();
+            buttonRow.style.flexDirection = FlexDirection.Row;
+            buttonRow.style.justifyContent = Justify.SpaceBetween;
+
+            var generateRoomsBtn = new Button(GenerateRooms)
+            {
+                text = "Generate Rooms"
+            };
+            generateRoomsBtn.style.height = 28;
+            generateRoomsBtn.style.flexGrow = 1;
+            generateRoomsBtn.style.marginRight = 4;
+            buttonRow.Add(generateRoomsBtn);
+
+            var generateCorridorsBtn = new Button(GenerateCorridors)
+            {
+                text = "Generate Corridors"
+            };
+            generateCorridorsBtn.style.height = 28;
+            generateCorridorsBtn.style.flexGrow = 1;
+            buttonRow.Add(generateCorridorsBtn);
+
+            actions.Add(buttonRow);
 
             Add(m_toolsBoard);
         }
 
-        private void UpdateParameterVisibility()
-        {
-            var organicParams = m_toolsBoard.Q<BlackboardSection>("organic-params");
-            if (organicParams != null)
-            {
-                organicParams.style.display = m_generationMethod == GenerationMethod.Organic
-                    ? DisplayStyle.Flex
-                    : DisplayStyle.None;
-            }
-        }
-
         private void LoadPreferences()
         {
-            m_generationMethod = (GenerationMethod)EditorPrefs.GetInt(PREF_GENERATION_METHOD, (int)GenerationMethod.ConstraintBased);
             m_areaPlacementFactor = EditorPrefs.GetFloat(PREF_AREA_PLACEMENT, 2.0f);
             m_repulsionFactor = EditorPrefs.GetFloat(PREF_REPULSION, 1.0f);
             m_simulationIterations = EditorPrefs.GetInt(PREF_ITERATIONS, 100);
@@ -253,11 +277,18 @@ namespace DungeonGraph.Editor
             m_chaosFactor = EditorPrefs.GetFloat(PREF_CHAOS, 0.0f);
             m_realTimeSimulation = EditorPrefs.GetBool(PREF_REALTIME_SIMULATION, false);
             m_simulationSpeed = EditorPrefs.GetFloat(PREF_SIMULATION_SPEED, 10f);
+
+            // Load corridor tile by asset path
+            string tilePath = EditorPrefs.GetString(PREF_CORRIDOR_TILE, "");
+            if (!string.IsNullOrEmpty(tilePath))
+            {
+                m_corridorTile = AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.TileBase>(tilePath);
+            }
+            m_corridorWidth = EditorPrefs.GetInt(PREF_CORRIDOR_WIDTH, 2);
         }
 
         private void SavePreferences()
         {
-            EditorPrefs.SetInt(PREF_GENERATION_METHOD, (int)m_generationMethod);
             EditorPrefs.SetFloat(PREF_AREA_PLACEMENT, m_areaPlacementFactor);
             EditorPrefs.SetFloat(PREF_REPULSION, m_repulsionFactor);
             EditorPrefs.SetInt(PREF_ITERATIONS, m_simulationIterations);
@@ -266,16 +297,31 @@ namespace DungeonGraph.Editor
             EditorPrefs.SetFloat(PREF_CHAOS, m_chaosFactor);
             EditorPrefs.SetBool(PREF_REALTIME_SIMULATION, m_realTimeSimulation);
             EditorPrefs.SetFloat(PREF_SIMULATION_SPEED, m_simulationSpeed);
+
+            // Save corridor tile as asset path
+            string tilePath = m_corridorTile != null ? AssetDatabase.GetAssetPath(m_corridorTile) : "";
+            EditorPrefs.SetString(PREF_CORRIDOR_TILE, tilePath);
+            EditorPrefs.SetInt(PREF_CORRIDOR_WIDTH, m_corridorWidth);
         }
 
         /// <summary>
-        /// Generate dungeon from the current graph asset
+        /// Generate complete dungeon (rooms + corridors + tilemap merge)
         /// </summary>
         private void GenerateDungeon()
         {
+            GenerateRooms();
+            GenerateCorridors();
+            Debug.Log("[DungeonGraphView] Complete dungeon generation finished!");
+        }
+
+        /// <summary>
+        /// Generate only the rooms with visual connections (no corridors)
+        /// </summary>
+        private void GenerateRooms()
+        {
             if (m_dungeonGraph == null)
             {
-                Debug.LogWarning("No graph is loaded.");
+                Debug.LogWarning("[DungeonGraphView] No graph is loaded.");
                 return;
             }
 
@@ -287,6 +333,18 @@ namespace DungeonGraph.Editor
                 Debug.Log("[DungeonGraphView] Destroyed previous dungeon.");
             }
 
+            // Reset Master_Tilemap (clear all tiles)
+            var masterTilemapObj = GameObject.FindGameObjectWithTag("Dungeon");
+            if (masterTilemapObj != null)
+            {
+                var masterTilemap = masterTilemapObj.GetComponent<UnityEngine.Tilemaps.Tilemap>();
+                if (masterTilemap != null)
+                {
+                    masterTilemap.ClearAllTiles();
+                    Debug.Log("[DungeonGraphView] Cleared Master_Tilemap for new generation.");
+                }
+            }
+
             // Work on a copy so the editor asset isn't mutated by runtime logic
             var instance = ScriptableObject.Instantiate(m_dungeonGraph);
             try
@@ -295,33 +353,113 @@ namespace DungeonGraph.Editor
                 var start = instance.GetStartNode();
                 if (start == null)
                 {
-                    Debug.LogError("No StartNode found in this graph.");
+                    Debug.LogError("[DungeonGraphView] No StartNode found in this graph.");
                     return;
                 }
 
-                // Call the appropriate dungeon generator based on selected method
-                Debug.Log($"[DungeonGraphView] Starting dungeon generation using {m_generationMethod} method...");
+                // Generate rooms using organic generation
+                Debug.Log("[DungeonGraphView] Starting room generation using Organic method...");
 
-                if (m_generationMethod == GenerationMethod.Organic)
+                OrganicGeneration.GenerateRooms(instance, null, m_areaPlacementFactor, m_repulsionFactor,
+                    m_simulationIterations, m_forceMode, m_stiffnessFactor, m_chaosFactor,
+                    m_realTimeSimulation, m_simulationSpeed);
+
+                // Assign corridor parameters to the tilemap system
+                var generatedDungeon = GameObject.Find("Generated_Dungeon");
+                if (generatedDungeon != null)
                 {
-                    OrganicGeneration.GenerateDungeon(instance, null, m_areaPlacementFactor, m_repulsionFactor,
-                        m_simulationIterations, m_forceMode, m_stiffnessFactor, m_chaosFactor,
-                        m_realTimeSimulation, m_simulationSpeed);
-                }
-                else
-                {
-                    ConstraintGeneration.GenerateDungeon(instance);
+                    var tilemapSystem = generatedDungeon.GetComponent<DungeonGraph.DungeonTilemapSystem>();
+                    if (tilemapSystem != null)
+                    {
+                        tilemapSystem.corridorTile = m_corridorTile;
+                        tilemapSystem.corridorWidth = m_corridorWidth;
+                        Debug.Log($"[DungeonGraphView] Assigned corridor tile and width to tilemap system");
+                    }
                 }
 
-                Debug.Log("[DungeonGraphView] Dungeon generated successfully!");
+                Debug.Log("[DungeonGraphView] Room generation complete!");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[DungeonGraphView] Generation failed: {ex.Message}\n{ex.StackTrace}");
+                Debug.LogError($"[DungeonGraphView] Room generation failed: {ex.Message}\n{ex.StackTrace}");
             }
             finally
             {
                 // Clean up the temporary instance
+                if (instance != null)
+                    ScriptableObject.DestroyImmediate(instance);
+            }
+        }
+
+        /// <summary>
+        /// Generate or regenerate corridors for the existing dungeon
+        /// </summary>
+        private void GenerateCorridors()
+        {
+            var existingDungeon = GameObject.Find("Generated_Dungeon");
+            if (existingDungeon == null)
+            {
+                Debug.LogWarning("[DungeonGraphView] No Generated_Dungeon found! Generate rooms first.");
+                return;
+            }
+
+            // Check if real-time simulation is still running
+            var simulationController = existingDungeon.GetComponent<DungeonGraph.DungeonSimulationController>();
+            if (simulationController != null)
+            {
+                Debug.LogWarning("[DungeonGraphView] Real-time simulation is still running! Wait for simulation to complete before generating corridors.");
+                return;
+            }
+
+            var tilemapSystem = existingDungeon.GetComponent<DungeonTilemapSystem>();
+            if (tilemapSystem == null)
+            {
+                Debug.LogError("[DungeonGraphView] No DungeonTilemapSystem found on Generated_Dungeon!");
+                return;
+            }
+
+            // Assign corridor parameters from UI
+            if (m_corridorTile != null)
+            {
+                tilemapSystem.corridorTile = m_corridorTile;
+                tilemapSystem.corridorWidth = m_corridorWidth;
+            }
+
+            // Try to find master tilemap by tag if not assigned
+            if (tilemapSystem.masterTilemap == null)
+            {
+                if (!tilemapSystem.FindMasterTilemap())
+                {
+                    Debug.LogError("[DungeonGraphView] Could not find master tilemap! Tag a tilemap with 'Dungeon' tag.");
+                    return;
+                }
+            }
+
+            if (tilemapSystem.corridorTile == null)
+            {
+                Debug.LogError("[DungeonGraphView] Corridor tile not assigned! Please assign a corridor tile in Dungeon Tools.");
+                return;
+            }
+
+            // Get the graph instance
+            var instance = ScriptableObject.Instantiate(m_dungeonGraph);
+            try
+            {
+                instance.Init();
+
+                // Generate corridors using organic generation
+                Debug.Log("[DungeonGraphView] Generating corridors...");
+
+                OrganicGeneration.GenerateCorridors(instance, existingDungeon);
+
+                Debug.Log("[DungeonGraphView] Corridor generation complete!");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[DungeonGraphView] Corridor generation failed: {ex.Message}\n{ex.StackTrace}");
+            }
+            finally
+            {
                 if (instance != null)
                     ScriptableObject.DestroyImmediate(instance);
             }

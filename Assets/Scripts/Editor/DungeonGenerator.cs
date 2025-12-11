@@ -506,6 +506,11 @@ namespace DungeonGraph.Editor
             string simpleType = typeName.Replace("Node", "");
             roomObj.name = $"{simpleType} Room";
 
+            // Add node reference component for corridor generation
+            var nodeRef = roomObj.AddComponent<RoomNodeReference>();
+            nodeRef.nodeId = node.id;
+            nodeRef.nodeTypeName = simpleType;
+
             return roomObj;
         }
     }

@@ -84,6 +84,12 @@ MonoBehaviour:
     outputPort:
       nodeId: 55507245-9e05-4199-a676-4c1df26be581
       portIndex: 0
+  - inputPort:
+      nodeId: 06d522cb-d8e9-4ae1-b8d3-1d1690362cd9
+      portIndex: 1
+    outputPort:
+      nodeId: 6b5c1670-d0a3-4724-8280-9f7ee3f2c28b
+      portIndex: 0
   references:
     version: 2
     RefIds:
@@ -118,9 +124,9 @@ MonoBehaviour:
         m_guid: 796a1553-7fc8-45f5-8fe4-9b745fc4483d
         m_position:
           serializedVersion: 2
-          x: -21.333334
-          y: 256
-          width: 201.33333
+          x: -89.333336
+          y: 242
+          width: 201.33334
           height: 66.66666
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null

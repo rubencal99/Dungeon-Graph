@@ -40,7 +40,7 @@ namespace DungeonGraph.Editor
         private float m_stiffnessFactor = 1.0f;
         private float m_chaosFactor = 0.0f;
         private bool m_realTimeSimulation = false;
-        private float m_simulationSpeed = 30f;
+        private float m_simulationSpeed = 10f;
 
         // EditorPrefs keys for persistence
         private const string PREF_GENERATION_METHOD = "DungeonGraph.GenerationMethod";
@@ -207,7 +207,8 @@ namespace DungeonGraph.Editor
             });
             organicParams.Add(realTimeToggle);
 
-            var speedSlider = new Slider("Simulation Speed", 1f, 60f) { value = m_simulationSpeed };
+            var speedSlider = new Slider("Simulation Speed (iter/s)", 1f, 1000f) { value = m_simulationSpeed };
+            speedSlider.showInputField = true; // Show numeric input field
             speedSlider.RegisterValueChangedCallback(evt =>
             {
                 m_simulationSpeed = evt.newValue;
@@ -251,7 +252,7 @@ namespace DungeonGraph.Editor
             m_stiffnessFactor = EditorPrefs.GetFloat(PREF_STIFFNESS, 1.0f);
             m_chaosFactor = EditorPrefs.GetFloat(PREF_CHAOS, 0.0f);
             m_realTimeSimulation = EditorPrefs.GetBool(PREF_REALTIME_SIMULATION, false);
-            m_simulationSpeed = EditorPrefs.GetFloat(PREF_SIMULATION_SPEED, 30f);
+            m_simulationSpeed = EditorPrefs.GetFloat(PREF_SIMULATION_SPEED, 10f);
         }
 
         private void SavePreferences()
@@ -304,7 +305,8 @@ namespace DungeonGraph.Editor
                 if (m_generationMethod == GenerationMethod.Organic)
                 {
                     OrganicGeneration.GenerateDungeon(instance, null, m_areaPlacementFactor, m_repulsionFactor,
-                        m_simulationIterations, m_forceMode, m_stiffnessFactor, m_chaosFactor);
+                        m_simulationIterations, m_forceMode, m_stiffnessFactor, m_chaosFactor,
+                        m_realTimeSimulation, m_simulationSpeed);
                 }
                 else
                 {

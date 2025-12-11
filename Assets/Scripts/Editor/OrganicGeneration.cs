@@ -75,7 +75,27 @@ namespace DungeonGraph.Editor
             // 4. Run force-directed simulation (instant or real-time)
             if (realTimeSimulation)
             {
-                // Real-time mode: setup controller and let it animate
+                // Real-time mode: Apply initial positions first, then setup controller
+                foreach (var kvp in roomPositions)
+                {
+                    if (roomInstances.ContainsKey(kvp.Key))
+                    {
+                        var roomObj = roomInstances[kvp.Key];
+                        var roomTemplate = roomObj.GetComponent<DungeonGraph.RoomTemplate>();
+
+                        if (roomTemplate != null)
+                        {
+                            Vector3 centerOffset = roomTemplate.worldBounds.center - roomObj.transform.position;
+                            roomObj.transform.position = kvp.Value - centerOffset;
+                        }
+                        else
+                        {
+                            roomObj.transform.position = kvp.Value;
+                        }
+                    }
+                }
+
+                // Now start the simulation controller
                 var controller = parent.gameObject.AddComponent<DungeonSimulationController>();
                 var simParams = new DungeonSimulationController.SimulationParameters
                 {
@@ -91,7 +111,7 @@ namespace DungeonGraph.Editor
                 controller.StartSimulation(graph, roomInstances, roomPositions, nodeBounds, simParams);
                 Debug.Log("[OrganicGeneration] Real-time simulation started!");
 
-                // Don't apply final positions immediately - controller will handle it
+                // Controller will handle position updates from here
             }
             else
             {

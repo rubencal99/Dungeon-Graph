@@ -25,11 +25,12 @@ namespace DungeonGraph
         private Dictionary<string, GameObject> m_roomInstances;
         private Dictionary<string, Vector3> m_targetPositions;
         private Dictionary<string, Vector3> m_currentPositions;
+        private Dictionary<string, Vector3> m_centerOffsets; // Cache of room center offsets
         private Dictionary<string, Bounds> m_nodeBounds;
         private DungeonGraphAsset m_graph;
         private SimulationParameters m_params;
         private bool m_isSimulating = false;
-        private float m_lerpSpeed = 5f; // Smoothness of position interpolation
+        private float m_lerpSpeed = 8f; // Smoothness of position interpolation
 
         /// <summary>
         /// Start the real-time simulation with the given parameters
@@ -52,12 +53,32 @@ namespace DungeonGraph
             m_params = parameters;
             m_isSimulating = true;
 
+            // Cache center offsets for each room to avoid recalculating every frame
+            m_centerOffsets = new Dictionary<string, Vector3>();
+            foreach (var kvp in roomInstances)
+            {
+                var roomTemplate = kvp.Value.GetComponent<RoomTemplate>();
+                if (roomTemplate != null)
+                {
+                    // Calculate offset from GameObject position to its visual center
+                    Vector3 centerOffset = roomTemplate.worldBounds.center;
+                    m_centerOffsets[kvp.Key] = centerOffset;
+                }
+                else
+                {
+                    m_centerOffsets[kvp.Key] = Vector3.zero;
+                }
+            }
+
             // Start the simulation coroutine
             StartCoroutine(SimulationCoroutine());
         }
 
         private IEnumerator SimulationCoroutine()
         {
+            // Wait a brief moment to show initial positions
+            //yield return new WaitForSeconds(0.5f);
+
             // Calculate graph distances for repulsion scaling
             var graphDistances = CalculateGraphDistances(m_graph);
             var adjacency = BuildAdjacency(m_graph);
@@ -216,20 +237,12 @@ namespace DungeonGraph
                 m_currentPositions[nodeId] = newPos;
 
                 // Apply position to room GameObject
-                if (m_roomInstances.ContainsKey(nodeId))
+                if (m_roomInstances.ContainsKey(nodeId) && m_centerOffsets.ContainsKey(nodeId))
                 {
                     var roomObj = m_roomInstances[nodeId];
-                    var roomTemplate = roomObj.GetComponent<RoomTemplate>();
-
-                    if (roomTemplate != null)
-                    {
-                        Vector3 centerOffset = roomTemplate.worldBounds.center - roomObj.transform.position;
-                        roomObj.transform.position = newPos - centerOffset;
-                    }
-                    else
-                    {
-                        roomObj.transform.position = newPos;
-                    }
+                    Vector3 centerOffset = m_centerOffsets[nodeId];
+                    // newPos is the simulation position (center), subtract offset to get GameObject position
+                    roomObj.transform.position = newPos - centerOffset;
                 }
             }
         }

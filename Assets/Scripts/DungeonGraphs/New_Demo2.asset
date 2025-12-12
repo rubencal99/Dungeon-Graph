@@ -21,6 +21,8 @@ MonoBehaviour:
   - rid: 2036059415770824893
   - rid: 2036059415770824895
   - rid: 1121361347482746880
+  - rid: 1121361399645995070
+  - rid: 1121361399645995071
   m_connections:
   - inputPort:
       nodeId: 06d522cb-d8e9-4ae1-b8d3-1d1690362cd9
@@ -70,6 +72,18 @@ MonoBehaviour:
     outputPort:
       nodeId: 80ae1bff-3f68-4eb9-bf66-ca5470909060
       portIndex: 0
+  - inputPort:
+      nodeId: 7f2177d2-58ba-480b-ac06-f2a1b6a793c2
+      portIndex: 0
+    outputPort:
+      nodeId: 9173a49a-e749-4336-90f6-ddb3ebdc01b1
+      portIndex: 1
+  - inputPort:
+      nodeId: 550403ce-500c-48ac-9980-9839a11fe5f3
+      portIndex: 1
+    outputPort:
+      nodeId: 67a60568-4b3b-4758-8a75-05868eaac86b
+      portIndex: 0
   references:
     version: 2
     RefIds:
@@ -79,13 +93,39 @@ MonoBehaviour:
         m_guid: 80ae1bff-3f68-4eb9-bf66-ca5470909060
         m_position:
           serializedVersion: 2
-          x: 511.33334
-          y: 110.66667
+          x: 424.66666
+          y: 361.33334
           width: 201.33331
           height: 66.66666
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1
+    - rid: 1121361399645995070
+      type: {class: BasicNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: 9173a49a-e749-4336-90f6-ddb3ebdc01b1
+        m_position:
+          serializedVersion: 2
+          x: -62
+          y: 390.66666
+          width: 201.33334
+          height: 66.66669
+        typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+        size: 0
+    - rid: 1121361399645995071
+      type: {class: BasicNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: 550403ce-500c-48ac-9980-9839a11fe5f3
+        m_position:
+          serializedVersion: 2
+          x: 589.3334
+          y: 251.33334
+          width: 201.33331
+          height: 66.66666
+        typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+        size: 0
     - rid: 2036059381359444162
       type: {class: StartNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
       data:

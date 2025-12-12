@@ -112,9 +112,9 @@ MonoBehaviour:
         m_guid: 80ae1bff-3f68-4eb9-bf66-ca5470909060
         m_position:
           serializedVersion: 2
-          x: 528
-          y: 384
-          width: 201.33337
+          x: 334.66666
+          y: 469.33334
+          width: 201.33331
           height: 66.66666
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
@@ -125,9 +125,9 @@ MonoBehaviour:
         m_guid: 55507245-9e05-4199-a676-4c1df26be581
         m_position:
           serializedVersion: 2
-          x: 435.3333
-          y: 569.3333
-          width: 70.66669
+          x: 238
+          y: 621.3333
+          width: 70.66667
           height: 45.333374
         typeName: DungeonGraph.HubNode, DungeonGraph.Runtime, Version=0.0.0.0, Culture=neutral,
           PublicKeyToken=null
@@ -137,9 +137,9 @@ MonoBehaviour:
         m_guid: f0b89371-70bd-4961-8a55-5e8a06fcd1f4
         m_position:
           serializedVersion: 2
-          x: 405.3333
-          y: 717.3333
-          width: 201.33334
+          x: 184
+          y: 704
+          width: 201.33333
           height: 66.66669
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
@@ -150,9 +150,9 @@ MonoBehaviour:
         m_guid: 796a1553-7fc8-45f5-8fe4-9b745fc4483d
         m_position:
           serializedVersion: 2
-          x: 578
-          y: 581.3333
-          width: 201.33337
+          x: 334.66666
+          y: 621.3333
+          width: 201.33331
           height: 66.66669
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
@@ -200,10 +200,10 @@ MonoBehaviour:
         m_guid: 7f2177d2-58ba-480b-ac06-f2a1b6a793c2
         m_position:
           serializedVersion: 2
-          x: -189.33333
-          y: 417.33334
+          x: -167.33333
+          y: 382.66666
           width: 201.33333
-          height: 66.66666
+          height: 66.66669
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1
@@ -213,9 +213,9 @@ MonoBehaviour:
         m_guid: 67a60568-4b3b-4758-8a75-05868eaac86b
         m_position:
           serializedVersion: 2
-          x: 234
-          y: 449.33334
-          width: 201.33333
+          x: 111.33333
+          y: 469.33334
+          width: 201.33334
           height: 66.66666
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
@@ -226,10 +226,10 @@ MonoBehaviour:
         m_guid: 74ec9596-f7cd-4159-b5bd-2b44a52aed47
         m_position:
           serializedVersion: 2
-          x: 200.66667
-          y: 797.3333
-          width: 69.33334
-          height: 45.333374
+          x: 61.333336
+          y: 692
+          width: 69.33333
+          height: 45.333313
         typeName: DungeonGraph.EndNode, DungeonGraph.Runtime, Version=0.0.0.0, Culture=neutral,
           PublicKeyToken=null
     - rid: 2036059415770824895
@@ -238,9 +238,9 @@ MonoBehaviour:
         m_guid: 470d1bc9-59bc-4d28-96aa-3850970e7e6b
         m_position:
           serializedVersion: 2
-          x: 196
-          y: 694.6667
+          x: 56.666668
+          y: 589.3333
           width: 75.33333
-          height: 45.333313
+          height: 45.333374
         typeName: DungeonGraph.BossNode, DungeonGraph.Runtime, Version=0.0.0.0, Culture=neutral,
           PublicKeyToken=null

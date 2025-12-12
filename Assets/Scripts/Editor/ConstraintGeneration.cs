@@ -192,7 +192,7 @@ namespace DungeonGraph.Editor
             }
 
             // Generate corridors (right-angle corridors for constraint generation)
-            tilemapSystem.GenerateAllCorridors(graph, roomInstances, useRightAngleCorridors: true);
+            tilemapSystem.GenerateAllCorridors(graph, roomInstances);
 
             Debug.Log($"[ConstraintGeneration] Generated corridors for {roomInstances.Count} rooms!");
         }

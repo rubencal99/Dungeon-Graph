@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System;
 using System.Linq;
 using UnityEditor.UI;
+using CorridorType = DungeonGraph.CorridorType;
 
 namespace DungeonGraph.Editor
 {
@@ -38,6 +39,7 @@ namespace DungeonGraph.Editor
         // Corridor generation parameters
         private UnityEngine.Tilemaps.TileBase m_corridorTile = null;
         private int m_corridorWidth = 2;
+        private CorridorType m_corridorType = CorridorType.Direct;
 
         // EditorPrefs keys for persistence
         private const string PREF_AREA_PLACEMENT = "DungeonGraph.AreaPlacement";
@@ -50,6 +52,7 @@ namespace DungeonGraph.Editor
         private const string PREF_SIMULATION_SPEED = "DungeonGraph.SimulationSpeed";
         private const string PREF_CORRIDOR_TILE = "DungeonGraph.CorridorTile";
         private const string PREF_CORRIDOR_WIDTH = "DungeonGraph.CorridorWidth";
+        private const string PREF_CORRIDOR_TYPE = "DungeonGraph.CorridorType";
 
         public DungeonGraphView(SerializedObject serializedObject, DungeonGraphEditorWindow window)
         {
@@ -229,6 +232,14 @@ namespace DungeonGraph.Editor
             });
             corridorParams.Add(corridorWidthField);
 
+            var corridorTypeField = new EnumField("Corridor Type", m_corridorType);
+            corridorTypeField.RegisterValueChangedCallback(evt =>
+            {
+                m_corridorType = (CorridorType)evt.newValue;
+                SavePreferences();
+            });
+            corridorParams.Add(corridorTypeField);
+
             m_toolsBoard.Add(corridorParams);
 
             // Generation buttons
@@ -285,6 +296,7 @@ namespace DungeonGraph.Editor
                 m_corridorTile = AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.TileBase>(tilePath);
             }
             m_corridorWidth = EditorPrefs.GetInt(PREF_CORRIDOR_WIDTH, 2);
+            m_corridorType = (CorridorType)EditorPrefs.GetInt(PREF_CORRIDOR_TYPE, (int)CorridorType.Direct);
         }
 
         private void SavePreferences()
@@ -302,6 +314,7 @@ namespace DungeonGraph.Editor
             string tilePath = m_corridorTile != null ? AssetDatabase.GetAssetPath(m_corridorTile) : "";
             EditorPrefs.SetString(PREF_CORRIDOR_TILE, tilePath);
             EditorPrefs.SetInt(PREF_CORRIDOR_WIDTH, m_corridorWidth);
+            EditorPrefs.SetInt(PREF_CORRIDOR_TYPE, (int)m_corridorType);
         }
 
         /// <summary>
@@ -373,7 +386,8 @@ namespace DungeonGraph.Editor
                     {
                         tilemapSystem.corridorTile = m_corridorTile;
                         tilemapSystem.corridorWidth = m_corridorWidth;
-                        Debug.Log($"[DungeonGraphView] Assigned corridor tile and width to tilemap system");
+                        tilemapSystem.corridorType = m_corridorType;
+                        Debug.Log($"[DungeonGraphView] Assigned corridor tile, width, and type ({m_corridorType}) to tilemap system");
                     }
                 }
 

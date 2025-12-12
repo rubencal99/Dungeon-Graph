@@ -4,6 +4,13 @@ using UnityEngine.Tilemaps;
 
 namespace DungeonGraph
 {
+    public enum CorridorType
+    {
+        Direct,
+        Angled,
+        Both
+    }
+
     /// <summary>
     /// Handles tilemap alignment, merging, and corridor generation for dungeons
     /// </summary>
@@ -15,6 +22,7 @@ namespace DungeonGraph
         [Header("Corridor Settings")]
         public TileBase corridorTile; // Tile to use for corridor floors
         public int corridorWidth = 2; // Width of corridors in tiles
+        public CorridorType corridorType = CorridorType.Direct; // Type of corridors to generate
 
         [Header("References")]
         public Tilemap masterTilemap; // The unified tilemap for all rooms
@@ -274,7 +282,7 @@ namespace DungeonGraph
         /// Generate corridors for all connections in the graph
         /// </summary>
         public void GenerateAllCorridors(DungeonGraphAsset graph, Dictionary<string, GameObject> roomInstances,
-            bool useRightAngleCorridors = false)
+            CorridorType corridorType = CorridorType.Direct)
         {
             if (graph == null || graph.Connections == null)
             {
@@ -311,8 +319,20 @@ namespace DungeonGraph
                 Vector3 centerA = roomA.transform.position + templateA.worldBounds.center;
                 Vector3 centerB = roomB.transform.position + templateB.worldBounds.center;
 
-                // Generate corridor
-                if (useRightAngleCorridors)
+                // Determine which corridor type to use for this connection
+                bool useAngled = false;
+                if (corridorType == CorridorType.Angled)
+                {
+                    useAngled = true;
+                }
+                else if (corridorType == CorridorType.Both)
+                {
+                    // 50/50 random chance between direct and angled
+                    useAngled = Random.value < 0.5f;
+                }
+                // else Direct (useAngled = false)
+
+                if (useAngled)
                 {
                     // Alternate between horizontal-first and vertical-first for variety
                     bool horizontalFirst = (corridorCount % 2) == 0;

@@ -73,7 +73,7 @@ namespace DungeonGraph.Editor
             }
 
             // 4. Run force-directed simulation (instant or real-time)
-            if (realTimeSimulation)
+            if (realTimeSimulation && Application.isPlaying)
             {
                 // Real-time mode: Apply initial positions first, then setup controller
                 foreach (var kvp in roomPositions)
@@ -315,8 +315,8 @@ namespace DungeonGraph.Editor
             // 5. Generate corridors automatically after real-time simulation
             if (tilemapSystem.corridorTile != null && tilemapSystem.masterTilemap != null)
             {
-                Debug.Log("[OrganicGeneration] Auto-generating corridors after simulation...");
-                tilemapSystem.GenerateAllCorridors(graph, roomInstances, useRightAngleCorridors: false);
+                Debug.Log($"[OrganicGeneration] Auto-generating corridors after simulation (type: {tilemapSystem.corridorType})...");
+                tilemapSystem.GenerateAllCorridors(graph, roomInstances, tilemapSystem.corridorType);
                 Debug.Log("[OrganicGeneration] Corridor generation complete!");
             }
             else
@@ -382,8 +382,9 @@ namespace DungeonGraph.Editor
 
             Debug.Log($"[OrganicGeneration] Successfully mapped {roomInstances.Count} rooms for corridor generation");
 
-            // Generate corridors (direct corridors for organic generation)
-            tilemapSystem.GenerateAllCorridors(graph, roomInstances, useRightAngleCorridors: false);
+            // Generate corridors using the corridor type from tilemap system
+            Debug.Log($"[OrganicGeneration] Generating corridors (type: {tilemapSystem.corridorType})...");
+            tilemapSystem.GenerateAllCorridors(graph, roomInstances, tilemapSystem.corridorType);
 
             Debug.Log($"[OrganicGeneration] Generated corridors for {roomInstances.Count} rooms!");
         }

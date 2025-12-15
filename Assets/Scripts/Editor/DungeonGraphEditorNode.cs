@@ -15,15 +15,9 @@ namespace DungeonGraph.Editor
         public DungeonGraphNode Node => m_graphNode;
         private Port m_outputPort;
         private List<Port> m_ports;
-        private SerializedProperty m_serializedProperty;
-
-        // private Port m_linkPort;      
+        private SerializedProperty m_serializedProperty;  
 
         public List<Port> Ports => m_ports;
-
-        // custom containers, these are a style preference
-        // private VisualElement m_topPortContainer;
-        // private VisualElement m_bottomPortContainer;
 
         private SerializedObject m_SerializedObject;
         
@@ -61,14 +55,14 @@ namespace DungeonGraph.Editor
             m_centerPortContainer.pickingMode = PickingMode.Ignore;
             mainContainer.Add(m_centerPortContainer);
 
-            // NEW: a centered, visible "jack" that shows the node connector
+            // Centered, visible "jack" that shows the node connector
             var m_centerJack = new VisualElement { name = "center-jack" };
             m_centerJack.pickingMode = PickingMode.Ignore;     // never block the port
             m_centerPortContainer.Add(m_centerJack);
 
-            // Theme hooks (circle by default; swap to "jack--diamond" to get a diamond)
+            // Theme hooks
             m_centerJack.AddToClassList("jack");
-            m_centerJack.AddToClassList("jack--circle"); // change to "jack--diamond" if you prefer
+            m_centerJack.AddToClassList("jack--circle");
 
             // Add style classes for theming via USS
             this.AddToClassList("dungeon-node");
@@ -90,9 +84,7 @@ namespace DungeonGraph.Editor
             {
                 if (property.GetCustomAttribute<ExposedPropertyAttribute>() is ExposedPropertyAttribute exposedProperty)
                 {
-                    //Debug.Log(property.Name);
                     PropertyField field = DrawProperty(property.Name);
-                    //field.RegisterValueChangeCallback(OnFieldChangeCallback);
                 }
             }
 
@@ -101,39 +93,20 @@ namespace DungeonGraph.Editor
             RefreshExpandedState();
         }
 
-        // private void CreateLinkPort()
-        // {
-        //     // Direction can be Input or Output; just has to be consistent.
-        //     m_linkPort = InstantiatePort(
-        //         Orientation.Vertical,
-        //         Direction.Input,            // same direction for all nodes
-        //         Port.Capacity.Multi,        // allow many neighbors
-        //         typeof(PortTypes.FlowPort)
-        //     );
-
-        //     m_linkPort.portName = "Connections";  // or “Connections”
-        //     m_ports.Add(m_linkPort);
-        //     m_topPortContainer.Add(m_linkPort);
-            
-        //     // Flip to Output only while dragging from this port
-        //     m_linkPort.RegisterCallback<MouseDownEvent>(_ => m_linkPort.direction = Direction.Output);
-        //     m_linkPort.RegisterCallback<MouseUpEvent>(_   => m_linkPort.direction = Direction.Input);
-        // }
-
         // call this from the ctor instead of CreateLinkPort();
         private void CreateLinkPorts()
         {
-            // We'll attach to the jack we created in the ctor
+            // Attach to the jack we created in the ctor
             var jack = m_centerPortContainer.Q<VisualElement>("center-jack");
 
-            // OUTPUT — visible jack is for starting drags (HORIZONTAL for tangent connections)
+            // OUTPUT — visible jack is for starting drags
             m_linkOut = InstantiatePort(
                 Orientation.Horizontal, Direction.Output, Port.Capacity.Multi, typeof(PortTypes.FlowPort));
             m_linkOut.portName = string.Empty;
             m_ports.Add(m_linkOut);
             jack.Add(m_linkOut);
 
-            // INPUT — invisible drop target (enabled during drag by the GraphView) (HORIZONTAL for tangent connections)
+            // INPUT — invisible drop target (enabled during drag by the GraphView)
             m_linkIn = InstantiatePort(
                 Orientation.Horizontal, Direction.Input, Port.Capacity.Multi, typeof(PortTypes.FlowPort));
             m_linkIn.portName = string.Empty;
@@ -153,7 +126,7 @@ namespace DungeonGraph.Editor
             m_linkIn.style.position = Position.Absolute;
             m_linkIn.style.left = m_linkIn.style.top = m_linkIn.style.right = m_linkIn.style.bottom = 0;
 
-            // ✅ Pickability rules (flipped): only the Output is grabbable by default
+            // only the Output is grabbable by default
             m_linkOut.pickingMode = PickingMode.Position;   // start drags here
             m_linkIn.pickingMode  = PickingMode.Ignore;     // drop target; GV will enable during drag          
         }

@@ -38,7 +38,7 @@ namespace DungeonGraph
                 masterTilemap = dungeonObject.GetComponent<Tilemap>();
                 if (masterTilemap != null)
                 {
-                    Debug.Log($"[DungeonTilemapSystem] Found master tilemap: {masterTilemap.name}");
+                    //Debug.Log($"[DungeonTilemapSystem] Found master tilemap: {masterTilemap.name}");
                     return true;
                 }
                 else
@@ -59,7 +59,7 @@ namespace DungeonGraph
         /// </summary>
         public void SnapRoomsToGrid(Dictionary<string, GameObject> roomInstances)
         {
-            Debug.Log($"[DungeonTilemapSystem] SnapRoomsToGrid called with {roomInstances.Count} rooms");
+            //Debug.Log($"[DungeonTilemapSystem] SnapRoomsToGrid called with {roomInstances.Count} rooms");
 
             foreach (var kvp in roomInstances)
             {
@@ -73,11 +73,11 @@ namespace DungeonGraph
                     0f
                 );
 
-                Debug.Log($"[DungeonTilemapSystem] Snapping {roomObj.name}: {currentPos} -> {snappedPos}");
+                //Debug.Log($"[DungeonTilemapSystem] Snapping {roomObj.name}: {currentPos} -> {snappedPos}");
                 roomObj.transform.position = snappedPos;
             }
 
-            Debug.Log($"[DungeonTilemapSystem] Snapped {roomInstances.Count} rooms to grid (cell size: {gridCellSize})");
+            //Debug.Log($"[DungeonTilemapSystem] Snapped {roomInstances.Count} rooms to grid (cell size: {gridCellSize})");
         }
 
         /// <summary>
@@ -143,7 +143,7 @@ namespace DungeonGraph
                 }
             }
 
-            Debug.Log($"[DungeonTilemapSystem] Merged {totalTilesCopied} tiles from {roomInstances.Count} rooms to master tilemap");
+            //Debug.Log($"[DungeonTilemapSystem] Merged {totalTilesCopied} tiles from {roomInstances.Count} rooms to master tilemap");
         }
 
         /// <summary>
@@ -170,7 +170,7 @@ namespace DungeonGraph
                 DrawCorridorAtCell(cell, corridorWidth);
             }
 
-            Debug.Log($"[DungeonTilemapSystem] Generated direct corridor from {startCell} to {endCell} ({pathCells.Count} cells)");
+            //Debug.Log($"[DungeonTilemapSystem] Generated direct corridor from {startCell} to {endCell} ({pathCells.Count} cells)");
         }
 
         /// <summary>
@@ -215,7 +215,7 @@ namespace DungeonGraph
                 DrawCorridorAtCell(cell, corridorWidth);
             }
 
-            Debug.Log($"[DungeonTilemapSystem] Generated right-angle corridor from {startCell} to {endCell} via {cornerCell}");
+            //Debug.Log($"[DungeonTilemapSystem] Generated right-angle corridor from {startCell} to {endCell} via {cornerCell}");
         }
 
         /// <summary>
@@ -315,9 +315,9 @@ namespace DungeonGraph
                     continue;
                 }
 
-                // Get world centers of the rooms
-                Vector3 centerA = roomA.transform.position + templateA.worldBounds.center;
-                Vector3 centerB = roomB.transform.position + templateB.worldBounds.center;
+                // Get connection points (either closest exits or room centers)
+                Vector3 pointA = GetBestConnectionPoint(roomA, templateA, roomB, templateB);
+                Vector3 pointB = GetBestConnectionPoint(roomB, templateB, roomA, templateA);
 
                 // Determine which corridor type to use for this connection
                 bool useAngled = false;
@@ -336,17 +336,62 @@ namespace DungeonGraph
                 {
                     // Alternate between horizontal-first and vertical-first for variety
                     bool horizontalFirst = (corridorCount % 2) == 0;
-                    GenerateRightCorridor(centerA, centerB, horizontalFirst);
+                    GenerateRightCorridor(pointA, pointB, horizontalFirst);
                 }
                 else
                 {
-                    GenerateDirectCorridor(centerA, centerB);
+                    GenerateDirectCorridor(pointA, pointB);
                 }
 
                 corridorCount++;
             }
 
-            Debug.Log($"[DungeonTilemapSystem] Generated {corridorCount} corridors");
+            //Debug.Log($"[DungeonTilemapSystem] Generated {corridorCount} corridors");
+        }
+
+        /// <summary>
+        /// Get the best connection point for a room - either the closest exit to the target room, or the room center
+        /// </summary>
+        private Vector3 GetBestConnectionPoint(GameObject sourceRoom, RoomTemplate sourceTemplate,
+            GameObject targetRoom, RoomTemplate targetTemplate)
+        {
+            // If no exits are defined, use room center as fallback
+            if (sourceTemplate.exits == null || sourceTemplate.exits.Length == 0)
+            {
+                return sourceRoom.transform.position + sourceTemplate.worldBounds.center;
+            }
+
+            // Get target center for distance calculations
+            Vector3 targetCenter = targetRoom.transform.position + targetTemplate.worldBounds.center;
+
+            // Find the closest exit to the target room
+            Transform closestExit = null;
+            float closestDistance = float.MaxValue;
+
+            foreach (Transform exit in sourceTemplate.exits)
+            {
+                if (exit == null) continue; // Skip null references
+
+                Vector3 exitWorldPos = exit.position;
+                float distance = Vector3.Distance(exitWorldPos, targetCenter);
+
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestExit = exit;
+                }
+            }
+
+            // If we found a valid exit, use it; otherwise fallback to room center
+            if (closestExit != null)
+            {
+                return closestExit.position;
+            }
+            else
+            {
+                Debug.LogWarning($"[DungeonTilemapSystem] Room {sourceRoom.name} has exits array but all are null. Using room center.");
+                return sourceRoom.transform.position + sourceTemplate.worldBounds.center;
+            }
         }
     }
 }

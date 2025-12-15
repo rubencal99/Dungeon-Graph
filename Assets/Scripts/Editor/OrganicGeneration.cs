@@ -28,9 +28,11 @@ namespace DungeonGraph.Editor
                 parent = container.transform;
             }
 
+            /*
             Debug.Log($"[OrganicGeneration] Starting generation for graph with {graph.Nodes.Count} nodes");
             Debug.Log($"[OrganicGeneration] Parameters: AreaFactor={areaPlacementFactor}, RepulsionFactor={repulsionFactor}, " +
                 $"Iterations={simulationIterations}, ForceMode={forceMode}, StiffnessFactor={stiffnessFactor}, ChaosFactor={chaosFactor}");
+            */
 
             // 1. Calculate total area and bounds
             var nodeBounds = new Dictionary<string, Bounds>();
@@ -44,7 +46,7 @@ namespace DungeonGraph.Editor
 
             // Calculate placement area based on total room area and placement factor
             float placementRadius = Mathf.Sqrt(totalArea * areaPlacementFactor) / 2f;
-            Debug.Log($"[OrganicGeneration] Total room area: {totalArea:F2}, Placement radius: {placementRadius:F2}");
+            //Debug.Log($"[OrganicGeneration] Total room area: {totalArea:F2}, Placement radius: {placementRadius:F2}");
 
             // 2. Calculate graph distances (for repulsion based on separation)
             var graphDistances = CalculateGraphDistances(graph);
@@ -73,9 +75,9 @@ namespace DungeonGraph.Editor
             }
 
             // 4. Run force-directed simulation (instant or real-time)
-            if (realTimeSimulation && Application.isPlaying)
+            if (realTimeSimulation && Application.isPlaying) // only run realTime during runtime, otherwise breaks generation
             {
-                // Real-time mode: Apply initial positions first, then setup controller
+                // Realtime: Apply initial positions first, then setup controller
                 foreach (var kvp in roomPositions)
                 {
                     if (roomInstances.ContainsKey(kvp.Key))
@@ -156,7 +158,7 @@ namespace DungeonGraph.Editor
                     simulationSpeed = simulationSpeed
                 };
 
-                Debug.Log("[OrganicGeneration] Real-time simulation started! Tilemap merge will occur after simulation completes.");
+                //Debug.Log("[OrganicGeneration] Real-time simulation started! Tilemap merge will occur after simulation completes.");
                 controller.StartSimulation(graph, roomInstances, roomPositions, nodeBounds, simParams);
                 
                 // Controller will handle position updates and post-simulation setup
@@ -166,10 +168,10 @@ namespace DungeonGraph.Editor
             else
             {
                 // Instant mode: run simulation immediately
-                SimulateForces(graph, roomInstances, roomPositions, nodeBounds, graphDistances,
+                SimulateForces(graph, roomInstances, roomPositions, graphDistances,
                     repulsionFactor, simulationIterations, forceMode, stiffnessFactor, chaosFactor);
 
-                // 5. Apply final positions immediately
+                // Apply final positions immediately
                 foreach (var kvp in roomPositions)
                 {
                     if (roomInstances.ContainsKey(kvp.Key))
@@ -190,7 +192,7 @@ namespace DungeonGraph.Editor
                 }
             }
 
-            // 6. Add debug visualization (for instant mode only)
+            // 5. Add debug visualization (for instant mode only)
             var visualizer = parent.gameObject.AddComponent<DungeonConnectionVisualizer>();
             visualizer.connections = new List<(GameObject, GameObject)>();
             visualizer.rooms = new List<DungeonConnectionVisualizer.RoomInfo>();
@@ -224,12 +226,12 @@ namespace DungeonGraph.Editor
                 }
             }
 
-            // 7. Setup tilemap system for grid alignment
+            // 6. Setup tilemap system for grid alignment
             var tilemapSystem = parent.gameObject.GetComponent<DungeonTilemapSystem>();
             if (tilemapSystem == null)
             {
                 tilemapSystem = parent.gameObject.AddComponent<DungeonTilemapSystem>();
-                Debug.Log("[OrganicGeneration] Added DungeonTilemapSystem component");
+                //Debug.Log("[OrganicGeneration] Added DungeonTilemapSystem component");
             }
 
             // Snap rooms to grid (important for proper tilemap alignment)
@@ -245,14 +247,14 @@ namespace DungeonGraph.Editor
             if (tilemapSystem.masterTilemap != null)
             {
                 tilemapSystem.MergeRoomsToMasterTilemap(roomInstances);
-                Debug.Log("[OrganicGeneration] Tilemap merge complete!");
+                //Debug.Log("[OrganicGeneration] Tilemap merge complete!");
             }
             else
             {
                 Debug.LogWarning("[OrganicGeneration] Master tilemap not found. Tag a tilemap with 'Dungeon' to enable tilemap merging.");
             }
 
-            Debug.Log("[OrganicGeneration] Room generation complete!");
+            //Debug.Log("[OrganicGeneration] Room generation complete!");
         }
 
         /// <summary>
@@ -266,7 +268,7 @@ namespace DungeonGraph.Editor
                 return;
             }
 
-            Debug.Log("[OrganicGeneration] Starting post-simulation setup...");
+            //Debug.Log("[OrganicGeneration] Starting post-simulation setup...");
 
             // Find all room instances using RoomNodeReference components
             var roomInstances = new Dictionary<string, GameObject>();
@@ -297,15 +299,15 @@ namespace DungeonGraph.Editor
             }
 
             // 3. Snap rooms to grid (important for proper tilemap alignment)
-            Debug.Log("[OrganicGeneration] Snapping rooms to grid...");
+            //Debug.Log("[OrganicGeneration] Snapping rooms to grid...");
             tilemapSystem.SnapRoomsToGrid(roomInstances);
 
             // 4. Merge tilemaps if master tilemap is available
             if (tilemapSystem.masterTilemap != null)
             {
-                Debug.Log("[OrganicGeneration] Merging tilemaps...");
+                //Debug.Log("[OrganicGeneration] Merging tilemaps...");
                 tilemapSystem.MergeRoomsToMasterTilemap(roomInstances);
-                Debug.Log("[OrganicGeneration] Tilemap merge complete!");
+                //Debug.Log("[OrganicGeneration] Tilemap merge complete!");
             }
             else
             {
@@ -315,9 +317,9 @@ namespace DungeonGraph.Editor
             // 5. Generate corridors automatically after real-time simulation
             if (tilemapSystem.corridorTile != null && tilemapSystem.masterTilemap != null)
             {
-                Debug.Log($"[OrganicGeneration] Auto-generating corridors after simulation (type: {tilemapSystem.corridorType})...");
+                //Debug.Log($"[OrganicGeneration] Auto-generating corridors after simulation (type: {tilemapSystem.corridorType})...");
                 tilemapSystem.GenerateAllCorridors(graph, roomInstances, tilemapSystem.corridorType);
-                Debug.Log("[OrganicGeneration] Corridor generation complete!");
+                //Debug.Log("[OrganicGeneration] Corridor generation complete!");
             }
             else
             {
@@ -327,7 +329,7 @@ namespace DungeonGraph.Editor
                 }
             }
 
-            Debug.Log("[OrganicGeneration] Post-simulation setup complete!");
+            //Debug.Log("[OrganicGeneration] Post-simulation setup complete!");
         }
 
         /// <summary>
@@ -359,14 +361,14 @@ namespace DungeonGraph.Editor
             var roomInstances = new Dictionary<string, GameObject>();
             var roomReferences = dungeonParent.GetComponentsInChildren<RoomNodeReference>();
 
-            Debug.Log($"[OrganicGeneration] Found {roomReferences.Length} RoomNodeReference components");
+            //Debug.Log($"[OrganicGeneration] Found {roomReferences.Length} RoomNodeReference components");
 
             foreach (var roomRef in roomReferences)
             {
                 if (!string.IsNullOrEmpty(roomRef.nodeId))
                 {
                     roomInstances[roomRef.nodeId] = roomRef.gameObject;
-                    Debug.Log($"[OrganicGeneration] Mapped room: {roomRef.gameObject.name} -> nodeId: {roomRef.nodeId}");
+                    //Debug.Log($"[OrganicGeneration] Mapped room: {roomRef.gameObject.name} -> nodeId: {roomRef.nodeId}");
                 }
                 else
                 {
@@ -380,13 +382,13 @@ namespace DungeonGraph.Editor
                 return;
             }
 
-            Debug.Log($"[OrganicGeneration] Successfully mapped {roomInstances.Count} rooms for corridor generation");
+            //Debug.Log($"[OrganicGeneration] Successfully mapped {roomInstances.Count} rooms for corridor generation");
 
             // Generate corridors using the corridor type from tilemap system
-            Debug.Log($"[OrganicGeneration] Generating corridors (type: {tilemapSystem.corridorType})...");
+            //Debug.Log($"[OrganicGeneration] Generating corridors (type: {tilemapSystem.corridorType})...");
             tilemapSystem.GenerateAllCorridors(graph, roomInstances, tilemapSystem.corridorType);
 
-            Debug.Log($"[OrganicGeneration] Generated corridors for {roomInstances.Count} rooms!");
+            //Debug.Log($"[OrganicGeneration] Generated corridors for {roomInstances.Count} rooms!");
         }
 
         // Calculate shortest path distances between all node pairs
@@ -395,7 +397,7 @@ namespace DungeonGraph.Editor
             var distances = new Dictionary<(string, string), int>();
             var adj = BuildAdjacency(graph);
 
-            // Floyd-Warshall algorithm for all-pairs shortest paths
+            // All-pairs shortest paths
             foreach (var nodeA in graph.Nodes)
             {
                 foreach (var nodeB in graph.Nodes)
@@ -444,11 +446,12 @@ namespace DungeonGraph.Editor
 
         // Simulate spring forces between connected rooms and repulsion between all rooms
         private static void SimulateForces(DungeonGraphAsset graph, Dictionary<string, GameObject> roomInstances,
-            Dictionary<string, Vector3> roomPositions, Dictionary<string, Bounds> nodeBounds,
-            Dictionary<(string, string), int> graphDistances, float repulsionFactor, int iterations,
-            bool forceMode, float stiffnessFactor, float chaosFactor)
+            Dictionary<string, Vector3> roomPositions, Dictionary<(string, string), int> graphDistances,
+            float repulsionFactor, int iterations, bool forceMode, float stiffnessFactor, float chaosFactor)
         {
             var adj = BuildAdjacency(graph);
+
+            // IMPORTANT: Some magic numbers here, needs more iteration/fine-tuning/editor customization
             float springStiffness = 0.01f * stiffnessFactor;  // Attraction force for connected rooms (affected by stiffness factor)
             float repulsionStrength = 50f * repulsionFactor;  // Base repulsion between rooms
             float damping = 0.9f;  // Velocity damping
@@ -463,8 +466,9 @@ namespace DungeonGraph.Editor
             int maxIterations = forceMode ? 2096 : iterations;
             float energyThreshold = 0.01f; // Energy considered "zero" for force mode
 
-            Debug.Log($"[OrganicGeneration] Starting simulation with {(forceMode ? "Force Mode (max " + maxIterations + " iterations)" : iterations + " iterations")}");
+            //Debug.Log($"[OrganicGeneration] Starting simulation with {(forceMode ? "Force Mode (max " + maxIterations + " iterations)" : iterations + " iterations")}");
 
+            // IMPORTANT: Spring/Repulsion forces being updated
             for (int iter = 0; iter < maxIterations; iter++)
             {
                 var forces = new Dictionary<string, Vector3>();
@@ -521,7 +525,7 @@ namespace DungeonGraph.Editor
                                 : 1;
 
                             // Stronger repulsion for nodes that are farther apart in the graph
-                            float repulsion = (repulsionStrength * graphDist) / (distance * distance);
+                            float repulsion = repulsionStrength * graphDist / (distance * distance);
 
                             forces[nodeA] -= direction * repulsion;
                             forces[nodeB] += direction * repulsion;
@@ -542,7 +546,7 @@ namespace DungeonGraph.Editor
                             Random.Range(-1f, 1f),
                             Random.Range(-1f, 1f),
                             0f
-                        ) * chaosFactor * 5f; // Scale chaos effect
+                        ) * chaosFactor; // Scale chaos effect
 
                         velocities[nodeId] += chaosVelocity;
                     }
@@ -562,10 +566,10 @@ namespace DungeonGraph.Editor
                 float totalEnergy = velocities.Values.Sum(v => v.sqrMagnitude);
 
                 // Log progress every 20 iterations
-                if (iter % 20 == 0)
-                {
-                    Debug.Log($"[OrganicGeneration] Iteration {iter}/{maxIterations}, Total energy: {totalEnergy:F2}");
-                }
+                // if (iter % 20 == 0)
+                // {
+                //     Debug.Log($"[OrganicGeneration] Iteration {iter}/{maxIterations}, Total energy: {totalEnergy:F2}");
+                // }
 
                 // In force mode, stop when energy is near zero
                 if (forceMode && totalEnergy < energyThreshold)
@@ -575,7 +579,7 @@ namespace DungeonGraph.Editor
                 }
             }
 
-            Debug.Log("[OrganicGeneration] Simulation complete");
+            //Debug.Log("[OrganicGeneration] Simulation complete");
         }
 
         // Helper methods from ConstraintGeneration

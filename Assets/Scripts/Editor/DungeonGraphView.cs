@@ -124,7 +124,7 @@ namespace DungeonGraph.Editor
                 subTitle = m_dungeonGraph != null ? m_dungeonGraph.name : string.Empty
             };
 
-            // Make it draggable / collapsible / resizable (nice QoL)
+            // Make it draggable | collapsible | resizable
             m_toolsBoard.capabilities |= Capabilities.Movable | Capabilities.Collapsible | Capabilities.Resizable;
 
             // Position and a reasonable default size that fits all parameters and buttons
@@ -324,7 +324,7 @@ namespace DungeonGraph.Editor
         {
             GenerateRooms();
             GenerateCorridors();
-            Debug.Log("[DungeonGraphView] Complete dungeon generation finished!");
+            //Debug.Log("[DungeonGraphView] Complete dungeon generation finished!");
         }
 
         /// <summary>
@@ -343,7 +343,7 @@ namespace DungeonGraph.Editor
             if (existingDungeon != null)
             {
                 GameObject.DestroyImmediate(existingDungeon);
-                Debug.Log("[DungeonGraphView] Destroyed previous dungeon.");
+                //Debug.Log("[DungeonGraphView] Destroyed previous dungeon.");
             }
 
             // Reset Master_Tilemap (clear all tiles)
@@ -354,7 +354,7 @@ namespace DungeonGraph.Editor
                 if (masterTilemap != null)
                 {
                     masterTilemap.ClearAllTiles();
-                    Debug.Log("[DungeonGraphView] Cleared Master_Tilemap for new generation.");
+                    //Debug.Log("[DungeonGraphView] Cleared Master_Tilemap for new generation.");
                 }
             }
 
@@ -371,7 +371,7 @@ namespace DungeonGraph.Editor
                 }
 
                 // Generate rooms using organic generation
-                Debug.Log("[DungeonGraphView] Starting room generation using Organic method...");
+                //Debug.Log("[DungeonGraphView] Starting room generation using Organic method...");
 
                 OrganicGeneration.GenerateRooms(instance, null, m_areaPlacementFactor, m_repulsionFactor,
                     m_simulationIterations, m_forceMode, m_stiffnessFactor, m_chaosFactor,
@@ -387,11 +387,11 @@ namespace DungeonGraph.Editor
                         tilemapSystem.corridorTile = m_corridorTile;
                         tilemapSystem.corridorWidth = m_corridorWidth;
                         tilemapSystem.corridorType = m_corridorType;
-                        Debug.Log($"[DungeonGraphView] Assigned corridor tile, width, and type ({m_corridorType}) to tilemap system");
+                        //Debug.Log($"[DungeonGraphView] Assigned corridor tile, width, and type ({m_corridorType}) to tilemap system");
                     }
                 }
 
-                Debug.Log("[DungeonGraphView] Room generation complete!");
+                //Debug.Log("[DungeonGraphView] Room generation complete!");
             }
             catch (System.Exception ex)
             {
@@ -404,11 +404,11 @@ namespace DungeonGraph.Editor
                 if (instance != null && !m_realTimeSimulation)
                 {
                     ScriptableObject.DestroyImmediate(instance);
-                    Debug.Log("[DungeonGraphView] Destroyed graph instance after instant generation");
+                    //Debug.Log("[DungeonGraphView] Destroyed graph instance after instant generation");
                 }
                 else if (instance != null && m_realTimeSimulation)
                 {
-                    Debug.Log("[DungeonGraphView] Graph instance will be preserved for real-time simulation");
+                    //Debug.Log("[DungeonGraphView] Graph instance will be preserved for real-time simulation");
                 }
             }
         }
@@ -470,11 +470,11 @@ namespace DungeonGraph.Editor
                 instance.Init();
 
                 // Generate corridors using organic generation
-                Debug.Log("[DungeonGraphView] Generating corridors...");
+                //Debug.Log("[DungeonGraphView] Generating corridors...");
 
                 OrganicGeneration.GenerateCorridors(instance, existingDungeon);
 
-                Debug.Log("[DungeonGraphView] Corridor generation complete!");
+                //Debug.Log("[DungeonGraphView] Corridor generation complete!");
             }
             catch (System.Exception ex)
             {
@@ -667,12 +667,10 @@ namespace DungeonGraph.Editor
 
         private void DrawConnection(DungeonGraphConnection connection)
         {
-            // Look up the two nodes the connection references (unchanged)
+            // Look up the two nodes the connection references
             DungeonGraphEditorNode inputNode = GetNode(connection.inputPort.nodeId);
             DungeonGraphEditorNode outputNode = GetNode(connection.outputPort.nodeId);
             if (inputNode == null || outputNode == null) return;
-
-            // Defensive: no ports, nothing to draw (unchanged)
             if (inputNode.Ports == null || inputNode.Ports.Count == 0) return;
             if (outputNode.Ports == null || outputNode.Ports.Count == 0) return;
 
@@ -699,7 +697,7 @@ namespace DungeonGraph.Editor
             else
             {
                 // Fallback: pick the correct jacks from each node regardless of saved indices
-                // (nodes in this project always have exactly one visible Output + one Input)
+                // (nodes should always have exactly one visible Output + one Input)
                 var aOut = inputNode.Ports.FirstOrDefault(p => p.direction == Direction.Output);
                 var aIn = inputNode.Ports.FirstOrDefault(p => p.direction == Direction.Input);
                 var bOut = outputNode.Ports.FirstOrDefault(p => p.direction == Direction.Output);
@@ -721,17 +719,16 @@ namespace DungeonGraph.Editor
                 }
             }
 
-            // Always connect Output → Input (prevents "same direction" exception)
+            // Always connect Output -> Input (prevents "same direction" exception)
             var edge = outEnd.ConnectTo(inEnd);
             AddElement(edge);
 
-            // Keep the view↔data map in sync so deletes work later
+            // Keep the view/data map in sync so deletes work later
             m_connectionDictionary[edge] = connection;
 
             // ApplyAimTangents(edge);
             // edge.RegisterCallback<GeometryChangedEvent>(_ => ApplyAimTangents(edge));
 
-            // Optional: migrate saved indices to match the actual ends we used
             int newInIdx = (inNode == inputNode) ? inputNode.Ports.IndexOf(inEnd) : outputNode.Ports.IndexOf(inEnd);
             int newOutIdx = (outNode == outputNode) ? outputNode.Ports.IndexOf(outEnd) : inputNode.Ports.IndexOf(outEnd);
 

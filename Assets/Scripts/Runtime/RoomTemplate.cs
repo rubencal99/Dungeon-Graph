@@ -14,6 +14,10 @@ namespace DungeonGraph
         public Vector2Int sizeInCells;          // width/height in tiles (from unionCellBounds)
         public Tilemap[] tilemaps;              // all tilemaps used by this room
 
+        [Header("Corridor Exits")]
+        [Tooltip("Designated exit points for corridor connections. If empty, corridors will use room center.")]
+        public Transform[] exits;               // exit transforms for corridor generation
+
         /// <summary>Recompute everything. Call this after painting or before saving.</summary>
         public void Recompute()
         {

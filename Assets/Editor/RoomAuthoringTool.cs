@@ -17,6 +17,23 @@ public static class RoomAuthoringTools
         var go = GetSelectedRoomRootOrWarn();
         if (!go) return;
 
+        BakeRoom(go);
+
+        // Check if this GameObject is already a prefab instance
+        if (PrefabUtility.IsPartOfPrefabInstance(go))
+        {
+            // Get the prefab asset path and save to it
+            var prefabRoot = PrefabUtility.GetOutermostPrefabInstanceRoot(go);
+            var assetPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(prefabRoot);
+
+            if (!string.IsNullOrEmpty(assetPath))
+            {
+                SavePrefab(go, assetPath);
+                return;
+            }
+        }
+
+        // Not a prefab instance - try to use remembered folder or prompt
         string folder = EditorPrefs.GetString(KeyCurrent, "");
         if (!IsValidAssetsFolder(folder))
         {
@@ -24,8 +41,7 @@ public static class RoomAuthoringTools
             if (!ChooseFolderAndRemember(out folder)) return;
         }
 
-        // Bake, then save into the current folder with default name
-        BakeRoom(go);
+        // Save into the current folder with default name
         var file = Path.Combine(folder, go.name + ".prefab").Replace("\\", "/");
         SavePrefab(go, file);
     }
@@ -102,24 +118,68 @@ public static class RoomAuthoringTools
         // Recompute bounds/doors metadata
         var rt = go.GetComponent<DungeonGraph.RoomTemplate>() ?? go.AddComponent<DungeonGraph.RoomTemplate>();
         rt.Recompute();
+
+        // Auto-populate exits from "Exits" GameObject if it exists
+        PopulateExits(go, rt);
+    }
+
+    private static void PopulateExits(GameObject go, DungeonGraph.RoomTemplate rt)
+    {
+        // Look for a child GameObject named "Exits"
+        Transform exitsContainer = go.transform.Find("Exits");
+
+        if (exitsContainer == null)
+        {
+            // No "Exits" container found, leave exits array as-is
+            return;
+        }
+
+        // Get all direct children of the Exits container
+        int childCount = exitsContainer.childCount;
+
+        if (childCount == 0)
+        {
+            Debug.LogWarning($"[RoomAuthoringTool] Found 'Exits' container but it has no children. Exits array will be empty.");
+            rt.exits = new Transform[0];
+            return;
+        }
+
+        // Populate the exits array with all children transforms
+        rt.exits = new Transform[childCount];
+        for (int i = 0; i < childCount; i++)
+        {
+            rt.exits[i] = exitsContainer.GetChild(i);
+        }
+
+        Debug.Log($"[RoomAuthoringTool] Auto-populated {childCount} exit(s) from 'Exits' container");
     }
 
     private static void SavePrefab(GameObject go, string file)
     {
-        var prefab = PrefabUtility.SaveAsPrefabAssetAndConnect(go, file, InteractionMode.UserAction);
+        // Unpack completely to remove any prefab connections
+        // This ensures designers can duplicate existing prefabs for faster iteration
+        // and that all data (extents, center, etc.) is properly baked
+        if (PrefabUtility.IsPartOfAnyPrefab(go))
+        {
+            PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.UserAction);
+        }
+
+        // Create a new, unconnected prefab from the scene GameObject
+        var prefab = PrefabUtility.SaveAsPrefabAsset(go, file);
+
         if (prefab != null)
         {
             EditorUtility.SetDirty(prefab);
             AssetDatabase.SaveAssets();
 
             var rt = go.GetComponent<DungeonGraph.RoomTemplate>();
-            Debug.Log($"Saved room prefab at: <b>{file}</b>\n" +
-                      $"World bounds center={rt.worldBounds.center}, size={rt.worldBounds.size}, " +
-                      $"tiles={rt.sizeInCells.x}x{rt.sizeInCells.y}");
+            Debug.Log($"<color=#4CAF50><b>✓ Saved</b></color> room prefab: <b>{file}</b>\n" +
+                      $"Bounds: center={rt.worldBounds.center}, size={rt.worldBounds.size}, " +
+                      $"tiles={rt.sizeInCells.x}×{rt.sizeInCells.y}");
         }
         else
         {
-            Debug.LogError("Failed to save prefab.");
+            Debug.LogError($"<color=#F44336><b>✗ Failed</b></color> to save prefab at: {file}");
         }
     }
 

@@ -13,7 +13,7 @@ namespace DungeonGraph.Editor
         public static void GenerateRooms(DungeonGraphAsset graph, Transform parent = null,
             float areaPlacementFactor = 2.0f, float repulsionFactor = 1.0f, int simulationIterations = 100,
             bool forceMode = false, float stiffnessFactor = 1.0f, float chaosFactor = 0.0f,
-            bool realTimeSimulation = false, float simulationSpeed = 30f)
+            bool realTimeSimulation = false, float simulationSpeed = 30f, float idealDistance = 20f)
         {
             if (graph == null)
             {
@@ -155,7 +155,8 @@ namespace DungeonGraph.Editor
                     forceMode = forceMode,
                     stiffnessFactor = stiffnessFactor,
                     chaosFactor = chaosFactor,
-                    simulationSpeed = simulationSpeed
+                    simulationSpeed = simulationSpeed,
+                    idealDistance = idealDistance
                 };
 
                 //Debug.Log("[OrganicGeneration] Real-time simulation started! Tilemap merge will occur after simulation completes.");
@@ -169,7 +170,7 @@ namespace DungeonGraph.Editor
             {
                 // Instant mode: run simulation immediately
                 SimulateForces(graph, roomInstances, roomPositions, graphDistances,
-                    repulsionFactor, simulationIterations, forceMode, stiffnessFactor, chaosFactor);
+                    repulsionFactor, simulationIterations, forceMode, stiffnessFactor, chaosFactor, idealDistance);
 
                 // Apply final positions immediately
                 foreach (var kvp in roomPositions)
@@ -447,7 +448,7 @@ namespace DungeonGraph.Editor
         // Simulate spring forces between connected rooms and repulsion between all rooms
         private static void SimulateForces(DungeonGraphAsset graph, Dictionary<string, GameObject> roomInstances,
             Dictionary<string, Vector3> roomPositions, Dictionary<(string, string), int> graphDistances,
-            float repulsionFactor, int iterations, bool forceMode, float stiffnessFactor, float chaosFactor)
+            float repulsionFactor, int iterations, bool forceMode, float stiffnessFactor, float chaosFactor, float idealDistance)
         {
             var adj = BuildAdjacency(graph);
 
@@ -495,8 +496,7 @@ namespace DungeonGraph.Editor
                         {
                             direction /= distance;
 
-                            // Spring force proportional to distance
-                            float idealDistance = 20f; // Ideal spring length
+                            // Spring force proportional to distance from ideal
                             float force = springStiffness * (distance - idealDistance);
                             forces[nodeId] += direction * force;
                         }

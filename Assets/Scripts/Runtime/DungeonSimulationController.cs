@@ -19,6 +19,7 @@ namespace DungeonGraph
             public float stiffnessFactor = 1.0f;
             public float chaosFactor = 0.0f;
             public float simulationSpeed = 30f; // iterations per second
+            public float idealDistance = 20f; // ideal spring length between connected rooms
         }
 
         // Simulation state
@@ -129,8 +130,7 @@ namespace DungeonGraph
                             direction /= distance;
 
                             // Spring force proportional to distance
-                            float idealDistance = 20f; // Ideal spring length
-                            float force = springStiffness * (distance - idealDistance);
+                            float force = springStiffness * (distance - m_params.idealDistance);
                             forces[nodeId] += direction * force;
                         }
                     }

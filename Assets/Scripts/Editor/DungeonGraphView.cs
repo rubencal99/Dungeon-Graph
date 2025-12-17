@@ -35,6 +35,7 @@ namespace DungeonGraph.Editor
         private float m_chaosFactor = 0.0f;
         private bool m_realTimeSimulation = false;
         private float m_simulationSpeed = 10f;
+        private float m_idealDistance = 20f;
 
         // Corridor generation parameters
         private UnityEngine.Tilemaps.TileBase m_corridorTile = null;
@@ -50,6 +51,7 @@ namespace DungeonGraph.Editor
         private const string PREF_CHAOS = "DungeonGraph.Chaos";
         private const string PREF_REALTIME_SIMULATION = "DungeonGraph.RealTimeSimulation";
         private const string PREF_SIMULATION_SPEED = "DungeonGraph.SimulationSpeed";
+        private const string PREF_IDEAL_DISTANCE = "DungeonGraph.IdealDistance";
         private const string PREF_CORRIDOR_TILE = "DungeonGraph.CorridorTile";
         private const string PREF_CORRIDOR_WIDTH = "DungeonGraph.CorridorWidth";
         private const string PREF_CORRIDOR_TYPE = "DungeonGraph.CorridorType";
@@ -190,6 +192,15 @@ namespace DungeonGraph.Editor
             });
             organicParams.Add(chaosSlider);
 
+            var idealDistanceSlider = new Slider("Ideal Distance", 5f, 50f) { value = m_idealDistance };
+            idealDistanceSlider.showInputField = true; // Show numeric input field
+            idealDistanceSlider.RegisterValueChangedCallback(evt =>
+            {
+                m_idealDistance = evt.newValue;
+                SavePreferences();
+            });
+            organicParams.Add(idealDistanceSlider);
+
             var realTimeToggle = new Toggle("Real-Time Simulation") { value = m_realTimeSimulation };
             realTimeToggle.RegisterValueChangedCallback(evt =>
             {
@@ -288,6 +299,7 @@ namespace DungeonGraph.Editor
             m_chaosFactor = EditorPrefs.GetFloat(PREF_CHAOS, 0.0f);
             m_realTimeSimulation = EditorPrefs.GetBool(PREF_REALTIME_SIMULATION, false);
             m_simulationSpeed = EditorPrefs.GetFloat(PREF_SIMULATION_SPEED, 10f);
+            m_idealDistance = EditorPrefs.GetFloat(PREF_IDEAL_DISTANCE, 20f);
 
             // Load corridor tile by asset path
             string tilePath = EditorPrefs.GetString(PREF_CORRIDOR_TILE, "");
@@ -309,6 +321,7 @@ namespace DungeonGraph.Editor
             EditorPrefs.SetFloat(PREF_CHAOS, m_chaosFactor);
             EditorPrefs.SetBool(PREF_REALTIME_SIMULATION, m_realTimeSimulation);
             EditorPrefs.SetFloat(PREF_SIMULATION_SPEED, m_simulationSpeed);
+            EditorPrefs.SetFloat(PREF_IDEAL_DISTANCE, m_idealDistance);
 
             // Save corridor tile as asset path
             string tilePath = m_corridorTile != null ? AssetDatabase.GetAssetPath(m_corridorTile) : "";
@@ -375,7 +388,7 @@ namespace DungeonGraph.Editor
 
                 OrganicGeneration.GenerateRooms(instance, null, m_areaPlacementFactor, m_repulsionFactor,
                     m_simulationIterations, m_forceMode, m_stiffnessFactor, m_chaosFactor,
-                    m_realTimeSimulation, m_simulationSpeed);
+                    m_realTimeSimulation, m_simulationSpeed, m_idealDistance);
 
                 // Assign corridor parameters to the tilemap system
                 var generatedDungeon = GameObject.Find("Generated_Dungeon");

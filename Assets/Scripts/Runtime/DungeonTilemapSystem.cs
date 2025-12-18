@@ -27,6 +27,9 @@ namespace DungeonGraph
         [Header("References")]
         public Tilemap masterTilemap; // The unified tilemap for all rooms
 
+        // Track corridor tile positions for clearing
+        private HashSet<Vector3Int> corridorTilePositions = new HashSet<Vector3Int>();
+
         /// <summary>
         /// Automatically find and assign the master tilemap by searching for a tilemap tagged "Dungeon"
         /// </summary>
@@ -235,9 +238,33 @@ namespace DungeonGraph
                     if (!masterTilemap.HasTile(cell))
                     {
                         masterTilemap.SetTile(cell, corridorTile);
+                        corridorTilePositions.Add(cell); // Track corridor position
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Clear all corridor tiles from the master tilemap
+        /// </summary>
+        public void ClearCorridors()
+        {
+            if (masterTilemap == null)
+            {
+                Debug.LogWarning("[DungeonTilemapSystem] Cannot clear corridors: master tilemap is null");
+                return;
+            }
+
+            // Remove all corridor tiles
+            foreach (var corridorPos in corridorTilePositions)
+            {
+                masterTilemap.SetTile(corridorPos, null);
+            }
+
+            // Clear the tracking set
+            corridorTilePositions.Clear();
+
+            Debug.Log("[DungeonTilemapSystem] Cleared all corridor tiles");
         }
 
         /// <summary>
@@ -392,6 +419,287 @@ namespace DungeonGraph
                 Debug.LogWarning($"[DungeonTilemapSystem] Room {sourceRoom.name} has exits array but all are null. Using room center.");
                 return sourceRoom.transform.position + sourceTemplate.worldBounds.center;
             }
+        }
+
+        /// <summary>
+        /// Generate corridors for all connections with overlap prevention and regeneration
+        /// </summary>
+        public void GenerateAllCorridorsWithOverlapPrevention(DungeonGraphAsset graph, Dictionary<string, GameObject> roomInstances,
+            CorridorType corridorType = CorridorType.Direct, int maxCorridorRegenerations = 3)
+        {
+            if (graph == null || graph.Connections == null)
+            {
+                Debug.LogError("[DungeonTilemapSystem] Graph or connections are null!");
+                return;
+            }
+
+            int corridorCount = 0;
+            int totalRegenerations = 0;
+
+            foreach (var connection in graph.Connections)
+            {
+                string nodeAId = connection.inputPort.nodeId;
+                string nodeBId = connection.outputPort.nodeId;
+
+                if (!roomInstances.ContainsKey(nodeAId) || !roomInstances.ContainsKey(nodeBId))
+                {
+                    Debug.LogWarning($"[DungeonTilemapSystem] Connection references missing room: {nodeAId} <-> {nodeBId}");
+                    continue;
+                }
+
+                GameObject roomA = roomInstances[nodeAId];
+                GameObject roomB = roomInstances[nodeBId];
+
+                RoomTemplate templateA = roomA.GetComponent<RoomTemplate>();
+                RoomTemplate templateB = roomB.GetComponent<RoomTemplate>();
+
+                if (templateA == null || templateB == null)
+                {
+                    Debug.LogWarning($"[DungeonTilemapSystem] Rooms missing RoomTemplate component");
+                    continue;
+                }
+
+                // Try to generate a corridor without overlaps
+                bool corridorGenerated = false;
+                int regenerationAttempt = 0;
+
+                while (!corridorGenerated && regenerationAttempt <= maxCorridorRegenerations)
+                {
+                    Vector3 pointA, pointB;
+                    bool useAngled = false;
+                    bool horizontalFirst = true;
+
+                    // Strategy 1: Try different exit combinations (first 2 attempts)
+                    if (regenerationAttempt < 2)
+                    {
+                        // Try different exit points
+                        pointA = GetConnectionPointVariation(roomA, templateA, roomB, templateB, regenerationAttempt);
+                        pointB = GetConnectionPointVariation(roomB, templateB, roomA, templateA, regenerationAttempt);
+
+                        // Use default corridor type
+                        if (corridorType == CorridorType.Angled)
+                        {
+                            useAngled = true;
+                        }
+                        else if (corridorType == CorridorType.Both)
+                        {
+                            useAngled = Random.value < 0.5f;
+                        }
+
+                        horizontalFirst = (corridorCount % 2) == 0;
+                    }
+                    // Strategy 2: Try different corridor types (remaining attempts)
+                    else
+                    {
+                        // Use best connection points
+                        pointA = GetBestConnectionPoint(roomA, templateA, roomB, templateB);
+                        pointB = GetBestConnectionPoint(roomB, templateB, roomA, templateA);
+
+                        // Cycle through corridor types
+                        if (regenerationAttempt == 2)
+                        {
+                            useAngled = false; // Direct
+                        }
+                        else if (regenerationAttempt == 3)
+                        {
+                            useAngled = true; // Angled horizontal-first
+                            horizontalFirst = true;
+                        }
+                        else
+                        {
+                            useAngled = true; // Angled vertical-first
+                            horizontalFirst = false;
+                        }
+                    }
+
+                    // Get corridor cells for overlap check
+                    List<Vector3Int> corridorCells = GetCorridorCells(pointA, pointB, useAngled, horizontalFirst);
+
+                    // Check for overlaps
+                    bool hasOverlap = CheckCorridorRoomOverlap(corridorCells, roomInstances, nodeAId, nodeBId);
+
+                    if (!hasOverlap || regenerationAttempt >= maxCorridorRegenerations)
+                    {
+                        // No overlap or max attempts reached - draw the corridor
+                        if (useAngled)
+                        {
+                            GenerateRightCorridor(pointA, pointB, horizontalFirst);
+                        }
+                        else
+                        {
+                            GenerateDirectCorridor(pointA, pointB);
+                        }
+
+                        corridorGenerated = true;
+
+                        if (hasOverlap)
+                        {
+                            Debug.LogWarning($"[DungeonTilemapSystem] Corridor between {roomA.name} and {roomB.name} still overlaps after {maxCorridorRegenerations} regeneration attempts. Proceeding anyway.");
+                        }
+                        else if (regenerationAttempt > 0)
+                        {
+                            Debug.Log($"[DungeonTilemapSystem] Successfully generated corridor between {roomA.name} and {roomB.name} after {regenerationAttempt} regeneration attempts.");
+                            totalRegenerations += regenerationAttempt;
+                        }
+                    }
+                    else
+                    {
+                        regenerationAttempt++;
+                        Debug.Log($"[DungeonTilemapSystem] Corridor overlap detected between {roomA.name} and {roomB.name}. Regeneration attempt {regenerationAttempt}/{maxCorridorRegenerations}");
+                    }
+                }
+
+                corridorCount++;
+            }
+
+            Debug.Log($"[DungeonTilemapSystem] Generated {corridorCount} corridors with {totalRegenerations} total regenerations");
+        }
+
+        /// <summary>
+        /// Get a connection point with variation based on attempt number
+        /// </summary>
+        private Vector3 GetConnectionPointVariation(GameObject sourceRoom, RoomTemplate sourceTemplate,
+            GameObject targetRoom, RoomTemplate targetTemplate, int variation)
+        {
+            // If no exits are defined, use room center
+            if (sourceTemplate.exits == null || sourceTemplate.exits.Length == 0)
+            {
+                return sourceRoom.transform.position + sourceTemplate.worldBounds.center;
+            }
+
+            // Get all valid exits
+            List<Transform> validExits = new List<Transform>();
+            foreach (var exit in sourceTemplate.exits)
+            {
+                if (exit != null)
+                {
+                    validExits.Add(exit);
+                }
+            }
+
+            if (validExits.Count == 0)
+            {
+                return sourceRoom.transform.position + sourceTemplate.worldBounds.center;
+            }
+
+            // For variation 0, use closest exit (default behavior)
+            // For variation 1, use second-closest exit (if available)
+            // For higher variations, cycle through available exits
+            Vector3 targetPos = targetRoom.transform.position + targetTemplate.worldBounds.center;
+
+            // Sort exits by distance to target
+            validExits.Sort((a, b) =>
+            {
+                float distA = Vector3.Distance(a.position, targetPos);
+                float distB = Vector3.Distance(b.position, targetPos);
+                return distA.CompareTo(distB);
+            });
+
+            // Select exit based on variation
+            int exitIndex = Mathf.Min(variation, validExits.Count - 1);
+            return validExits[exitIndex].position;
+        }
+
+        /// <summary>
+        /// Get all cells that would be occupied by a corridor without actually drawing it
+        /// </summary>
+        private List<Vector3Int> GetCorridorCells(Vector3 startPoint, Vector3 endPoint, bool useAngled, bool horizontalFirst)
+        {
+            List<Vector3Int> allCells = new List<Vector3Int>();
+
+            Vector3Int startCell = masterTilemap.WorldToCell(startPoint);
+            Vector3Int endCell = masterTilemap.WorldToCell(endPoint);
+
+            if (useAngled)
+            {
+                // L-shaped corridor
+                Vector3Int cornerCell = horizontalFirst
+                    ? new Vector3Int(endCell.x, startCell.y, 0)
+                    : new Vector3Int(startCell.x, endCell.y, 0);
+
+                List<Vector3Int> segment1 = GetLinePoints(startCell, cornerCell);
+                List<Vector3Int> segment2 = GetLinePoints(cornerCell, endCell);
+
+                // Expand segments to corridor width
+                foreach (Vector3Int cell in segment1)
+                {
+                    allCells.AddRange(GetCellsWithWidth(cell, corridorWidth));
+                }
+                foreach (Vector3Int cell in segment2)
+                {
+                    allCells.AddRange(GetCellsWithWidth(cell, corridorWidth));
+                }
+            }
+            else
+            {
+                // Direct corridor
+                List<Vector3Int> pathCells = GetLinePoints(startCell, endCell);
+                foreach (Vector3Int cell in pathCells)
+                {
+                    allCells.AddRange(GetCellsWithWidth(cell, corridorWidth));
+                }
+            }
+
+            return allCells;
+        }
+
+        /// <summary>
+        /// Get all cells that would be covered by a corridor tile with the given width
+        /// </summary>
+        private List<Vector3Int> GetCellsWithWidth(Vector3Int centerCell, int width)
+        {
+            List<Vector3Int> cells = new List<Vector3Int>();
+            int halfWidth = width / 2;
+
+            for (int dx = -halfWidth; dx <= halfWidth; dx++)
+            {
+                for (int dy = -halfWidth; dy <= halfWidth; dy++)
+                {
+                    cells.Add(centerCell + new Vector3Int(dx, dy, 0));
+                }
+            }
+
+            return cells;
+        }
+
+        /// <summary>
+        /// Check if a corridor path overlaps with any room (except the two rooms it's connecting)
+        /// </summary>
+        private bool CheckCorridorRoomOverlap(List<Vector3Int> corridorCells, Dictionary<string, GameObject> roomInstances,
+            string excludeRoomA, string excludeRoomB)
+        {
+            foreach (var kvp in roomInstances)
+            {
+                // Skip the two rooms this corridor is connecting
+                if (kvp.Key == excludeRoomA || kvp.Key == excludeRoomB)
+                    continue;
+
+                GameObject room = kvp.Value;
+                RoomTemplate template = room.GetComponent<RoomTemplate>();
+                if (template == null) continue;
+
+                // Get room bounds in world space
+                Bounds roomBounds = template.worldBounds;
+                Vector3 roomWorldMin = room.transform.position + roomBounds.min;
+                Vector3 roomWorldMax = room.transform.position + roomBounds.max;
+
+                // Convert to cell coordinates
+                Vector3Int roomCellMin = masterTilemap.WorldToCell(roomWorldMin);
+                Vector3Int roomCellMax = masterTilemap.WorldToCell(roomWorldMax);
+
+                // Check if any corridor cell falls within the room bounds
+                foreach (Vector3Int corridorCell in corridorCells)
+                {
+                    if (corridorCell.x >= roomCellMin.x && corridorCell.x <= roomCellMax.x &&
+                        corridorCell.y >= roomCellMin.y && corridorCell.y <= roomCellMax.y)
+                    {
+                        Debug.LogWarning($"[DungeonTilemapSystem] Corridor overlaps with room: {room.name} at cell {corridorCell}");
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
     }
 }

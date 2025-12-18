@@ -36,6 +36,9 @@ namespace DungeonGraph.Editor
         private bool m_realTimeSimulation = false;
         private float m_simulationSpeed = 10f;
         private float m_idealDistance = 20f;
+        private bool m_allowRoomOverlap = false;
+        private int m_maxRoomRegenerations = 3;
+        private int m_maxCorridorRegenerations = 3;
 
         // Corridor generation parameters
         private UnityEngine.Tilemaps.TileBase m_corridorTile = null;
@@ -52,6 +55,9 @@ namespace DungeonGraph.Editor
         private const string PREF_REALTIME_SIMULATION = "DungeonGraph.RealTimeSimulation";
         private const string PREF_SIMULATION_SPEED = "DungeonGraph.SimulationSpeed";
         private const string PREF_IDEAL_DISTANCE = "DungeonGraph.IdealDistance";
+        private const string PREF_ALLOW_ROOM_OVERLAP = "DungeonGraph.AllowRoomOverlap";
+        private const string PREF_MAX_ROOM_REGENERATIONS = "DungeonGraph.MaxRoomRegenerations";
+        private const string PREF_MAX_CORRIDOR_REGENERATIONS = "DungeonGraph.MaxCorridorRegenerations";
         private const string PREF_CORRIDOR_TILE = "DungeonGraph.CorridorTile";
         private const string PREF_CORRIDOR_WIDTH = "DungeonGraph.CorridorWidth";
         private const string PREF_CORRIDOR_TYPE = "DungeonGraph.CorridorType";
@@ -218,6 +224,22 @@ namespace DungeonGraph.Editor
             });
             organicParams.Add(speedSlider);
 
+            var allowOverlapToggle = new Toggle("Allow Room Overlap") { value = m_allowRoomOverlap };
+            allowOverlapToggle.RegisterValueChangedCallback(evt =>
+            {
+                m_allowRoomOverlap = evt.newValue;
+                SavePreferences();
+            });
+            organicParams.Add(allowOverlapToggle);
+
+            var maxRoomRegenerationsField = new IntegerField("Max Room Regenerations") { value = m_maxRoomRegenerations };
+            maxRoomRegenerationsField.RegisterValueChangedCallback(evt =>
+            {
+                m_maxRoomRegenerations = evt.newValue;
+                SavePreferences();
+            });
+            organicParams.Add(maxRoomRegenerationsField);
+
             m_toolsBoard.Add(organicParams);
 
             // Corridor parameters section
@@ -250,6 +272,14 @@ namespace DungeonGraph.Editor
                 SavePreferences();
             });
             corridorParams.Add(corridorTypeField);
+
+            var maxCorridorRegenerationsField = new IntegerField("Max Corridor Regenerations") { value = m_maxCorridorRegenerations };
+            maxCorridorRegenerationsField.RegisterValueChangedCallback(evt =>
+            {
+                m_maxCorridorRegenerations = evt.newValue;
+                SavePreferences();
+            });
+            corridorParams.Add(maxCorridorRegenerationsField);
 
             m_toolsBoard.Add(corridorParams);
 
@@ -286,6 +316,15 @@ namespace DungeonGraph.Editor
 
             actions.Add(buttonRow);
 
+            // Clear button
+            var clearBtn = new Button(ClearDungeon)
+            {
+                text = "Clear Dungeon"
+            };
+            clearBtn.style.height = 28;
+            clearBtn.style.marginTop = 6;
+            actions.Add(clearBtn);
+
             Add(m_toolsBoard);
         }
 
@@ -300,6 +339,8 @@ namespace DungeonGraph.Editor
             m_realTimeSimulation = EditorPrefs.GetBool(PREF_REALTIME_SIMULATION, false);
             m_simulationSpeed = EditorPrefs.GetFloat(PREF_SIMULATION_SPEED, 10f);
             m_idealDistance = EditorPrefs.GetFloat(PREF_IDEAL_DISTANCE, 20f);
+            m_allowRoomOverlap = EditorPrefs.GetBool(PREF_ALLOW_ROOM_OVERLAP, false);
+            m_maxRoomRegenerations = EditorPrefs.GetInt(PREF_MAX_ROOM_REGENERATIONS, 3);
 
             // Load corridor tile by asset path
             string tilePath = EditorPrefs.GetString(PREF_CORRIDOR_TILE, "");
@@ -309,6 +350,7 @@ namespace DungeonGraph.Editor
             }
             m_corridorWidth = EditorPrefs.GetInt(PREF_CORRIDOR_WIDTH, 2);
             m_corridorType = (CorridorType)EditorPrefs.GetInt(PREF_CORRIDOR_TYPE, (int)CorridorType.Direct);
+            m_maxCorridorRegenerations = EditorPrefs.GetInt(PREF_MAX_CORRIDOR_REGENERATIONS, 3);
         }
 
         private void SavePreferences()
@@ -322,12 +364,15 @@ namespace DungeonGraph.Editor
             EditorPrefs.SetBool(PREF_REALTIME_SIMULATION, m_realTimeSimulation);
             EditorPrefs.SetFloat(PREF_SIMULATION_SPEED, m_simulationSpeed);
             EditorPrefs.SetFloat(PREF_IDEAL_DISTANCE, m_idealDistance);
+            EditorPrefs.SetBool(PREF_ALLOW_ROOM_OVERLAP, m_allowRoomOverlap);
+            EditorPrefs.SetInt(PREF_MAX_ROOM_REGENERATIONS, m_maxRoomRegenerations);
 
             // Save corridor tile as asset path
             string tilePath = m_corridorTile != null ? AssetDatabase.GetAssetPath(m_corridorTile) : "";
             EditorPrefs.SetString(PREF_CORRIDOR_TILE, tilePath);
             EditorPrefs.SetInt(PREF_CORRIDOR_WIDTH, m_corridorWidth);
             EditorPrefs.SetInt(PREF_CORRIDOR_TYPE, (int)m_corridorType);
+            EditorPrefs.SetInt(PREF_MAX_CORRIDOR_REGENERATIONS, m_maxCorridorRegenerations);
         }
 
         /// <summary>
@@ -388,7 +433,7 @@ namespace DungeonGraph.Editor
 
                 OrganicGeneration.GenerateRooms(instance, null, m_areaPlacementFactor, m_repulsionFactor,
                     m_simulationIterations, m_forceMode, m_stiffnessFactor, m_chaosFactor,
-                    m_realTimeSimulation, m_simulationSpeed, m_idealDistance);
+                    m_realTimeSimulation, m_simulationSpeed, m_idealDistance, m_allowRoomOverlap, m_maxRoomRegenerations, m_maxCorridorRegenerations);
 
                 // Assign corridor parameters to the tilemap system
                 var generatedDungeon = GameObject.Find("Generated_Dungeon");
@@ -453,6 +498,9 @@ namespace DungeonGraph.Editor
                 return;
             }
 
+            // Clear existing corridors before generating new ones
+            tilemapSystem.ClearCorridors();
+
             // Assign corridor parameters from UI
             if (m_corridorTile != null)
             {
@@ -485,7 +533,7 @@ namespace DungeonGraph.Editor
                 // Generate corridors using organic generation
                 //Debug.Log("[DungeonGraphView] Generating corridors...");
 
-                OrganicGeneration.GenerateCorridors(instance, existingDungeon);
+                OrganicGeneration.GenerateCorridors(instance, existingDungeon, m_maxCorridorRegenerations);
 
                 //Debug.Log("[DungeonGraphView] Corridor generation complete!");
             }
@@ -497,6 +545,32 @@ namespace DungeonGraph.Editor
             {
                 if (instance != null)
                     ScriptableObject.DestroyImmediate(instance);
+            }
+        }
+
+        /// <summary>
+        /// Clear the generated dungeon and all associated data
+        /// </summary>
+        private void ClearDungeon()
+        {
+            // Destroy the generated dungeon GameObject
+            var existingDungeon = GameObject.Find("Generated_Dungeon");
+            if (existingDungeon != null)
+            {
+                GameObject.DestroyImmediate(existingDungeon);
+                Debug.Log("[DungeonGraphView] Cleared generated dungeon.");
+            }
+
+            // Clear the master tilemap
+            var masterTilemapObj = GameObject.FindGameObjectWithTag("Dungeon");
+            if (masterTilemapObj != null)
+            {
+                var masterTilemap = masterTilemapObj.GetComponent<UnityEngine.Tilemaps.Tilemap>();
+                if (masterTilemap != null)
+                {
+                    masterTilemap.ClearAllTiles();
+                    Debug.Log("[DungeonGraphView] Cleared Master_Tilemap.");
+                }
             }
         }
 

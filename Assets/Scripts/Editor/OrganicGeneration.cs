@@ -13,7 +13,8 @@ namespace DungeonGraph.Editor
         public static void GenerateRooms(DungeonGraphAsset graph, Transform parent = null,
             float areaPlacementFactor = 2.0f, float repulsionFactor = 1.0f, int simulationIterations = 100,
             bool forceMode = false, float stiffnessFactor = 1.0f, float chaosFactor = 0.0f,
-            bool realTimeSimulation = false, float simulationSpeed = 30f, float idealDistance = 20f)
+            bool realTimeSimulation = false, float simulationSpeed = 30f, float idealDistance = 20f,
+            bool allowRoomOverlap = false, int maxRoomRegenerations = 3, int maxCorridorRegenerations = 3)
         {
             if (graph == null)
             {
@@ -52,29 +53,88 @@ namespace DungeonGraph.Editor
             var graphDistances = CalculateGraphDistances(graph);
 
             // 3. Instantiate all rooms at random positions within the placement area
+            // Wrap in regeneration loop if overlap prevention is enabled
             var roomInstances = new Dictionary<string, GameObject>();
             var roomPositions = new Dictionary<string, Vector3>();
+            bool hasOverlap = false;
+            int regenerationAttempt = 0;
 
-            foreach (var node in graph.Nodes)
+            do
             {
-                // Random position within circular area
-                float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-                float distance = Random.Range(0f, placementRadius);
-                Vector3 initialPos = new Vector3(
-                    Mathf.Cos(angle) * distance,
-                    Mathf.Sin(angle) * distance,
-                    0f
-                );
-
-                var roomObj = InstantiateRoomForNode(node, parent);
-                if (roomObj != null)
+                // Clear previous attempt if regenerating
+                if (regenerationAttempt > 0)
                 {
-                    roomInstances[node.id] = roomObj;
-                    roomPositions[node.id] = initialPos;
+                    //Debug.Log($"[OrganicGeneration] Regeneration attempt {regenerationAttempt}/{maxRoomRegenerations}");
+
+                    // Destroy previous room instances
+                    foreach (var roomObj in roomInstances.Values)
+                    {
+                        if (roomObj != null)
+                            GameObject.DestroyImmediate(roomObj);
+                    }
+                    roomInstances.Clear();
+                    roomPositions.Clear();
                 }
+
+                // Instantiate rooms at random positions
+                foreach (var node in graph.Nodes)
+                {
+                    // Random position within circular area
+                    float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+                    float distance = Random.Range(0f, placementRadius);
+                    Vector3 initialPos = new Vector3(
+                        Mathf.Cos(angle) * distance,
+                        Mathf.Sin(angle) * distance,
+                        0f
+                    );
+
+                    var roomObj = InstantiateRoomForNode(node, parent);
+                    if (roomObj != null)
+                    {
+                        roomInstances[node.id] = roomObj;
+                        roomPositions[node.id] = initialPos;
+                    }
+                }
+
+                // Run simulation (only in instant mode for overlap check)
+                if (!realTimeSimulation || !Application.isPlaying)
+                {
+                    SimulateForces(graph, roomInstances, roomPositions, graphDistances,
+                        repulsionFactor, simulationIterations, forceMode, stiffnessFactor, chaosFactor, idealDistance);
+
+                    // Check for overlap if enabled
+                    if (!allowRoomOverlap && regenerationAttempt < maxRoomRegenerations)
+                    {
+                        hasOverlap = CheckRoomOverlap(roomInstances, roomPositions);
+                        if (hasOverlap)
+                        {
+                            regenerationAttempt++;
+                        }
+                    }
+                    else
+                    {
+                        hasOverlap = false; // Accept the result
+                    }
+                }
+                else
+                {
+                    // Real-time mode: skip overlap check (interactive)
+                    hasOverlap = false;
+                }
+
+            } while (hasOverlap && regenerationAttempt <= maxRoomRegenerations);
+
+            // Warn if we hit max regenerations with overlap
+            if (hasOverlap && regenerationAttempt >= maxRoomRegenerations)
+            {
+                Debug.LogWarning($"[OrganicGeneration] Maximum regenerations ({maxRoomRegenerations}) reached with room overlap still present. Proceeding with current layout.");
+            }
+            else if (regenerationAttempt > 0)
+            {
+                Debug.Log($"[OrganicGeneration] Successfully generated dungeon without overlap after {regenerationAttempt} regenerations.");
             }
 
-            // 4. Run force-directed simulation (instant or real-time)
+            // 4. Apply final positions and setup visualization
             if (realTimeSimulation && Application.isPlaying) // only run realTime during runtime, otherwise breaks generation
             {
                 // Realtime: Apply initial positions first, then setup controller
@@ -156,7 +216,10 @@ namespace DungeonGraph.Editor
                     stiffnessFactor = stiffnessFactor,
                     chaosFactor = chaosFactor,
                     simulationSpeed = simulationSpeed,
-                    idealDistance = idealDistance
+                    idealDistance = idealDistance,
+                    allowRoomOverlap = allowRoomOverlap,
+                    maxRoomRegenerations = maxRoomRegenerations,
+                    maxCorridorRegenerations = maxCorridorRegenerations
                 };
 
                 //Debug.Log("[OrganicGeneration] Real-time simulation started! Tilemap merge will occur after simulation completes.");
@@ -168,11 +231,7 @@ namespace DungeonGraph.Editor
             }
             else
             {
-                // Instant mode: run simulation immediately
-                SimulateForces(graph, roomInstances, roomPositions, graphDistances,
-                    repulsionFactor, simulationIterations, forceMode, stiffnessFactor, chaosFactor, idealDistance);
-
-                // Apply final positions immediately
+                // Instant mode: apply final positions (simulation already ran in the loop above)
                 foreach (var kvp in roomPositions)
                 {
                     if (roomInstances.ContainsKey(kvp.Key))
@@ -319,7 +378,14 @@ namespace DungeonGraph.Editor
             if (tilemapSystem.corridorTile != null && tilemapSystem.masterTilemap != null)
             {
                 //Debug.Log($"[OrganicGeneration] Auto-generating corridors after simulation (type: {tilemapSystem.corridorType})...");
-                tilemapSystem.GenerateAllCorridors(graph, roomInstances, tilemapSystem.corridorType);
+
+                // Get maxCorridorRegenerations from simulation controller
+                var simController = dungeonParent.GetComponent<DungeonSimulationController>();
+                int maxCorridorRegenerations = simController != null && simController.Parameters != null
+                    ? simController.Parameters.maxCorridorRegenerations
+                    : 3;
+
+                tilemapSystem.GenerateAllCorridorsWithOverlapPrevention(graph, roomInstances, tilemapSystem.corridorType, maxCorridorRegenerations);
                 //Debug.Log("[OrganicGeneration] Corridor generation complete!");
             }
             else
@@ -336,7 +402,7 @@ namespace DungeonGraph.Editor
         /// <summary>
         /// Generate corridors for an existing dungeon
         /// </summary>
-        public static void GenerateCorridors(DungeonGraphAsset graph, GameObject dungeonParent)
+        public static void GenerateCorridors(DungeonGraphAsset graph, GameObject dungeonParent, int maxCorridorRegenerations = 3)
         {
             if (graph == null)
             {
@@ -385,9 +451,9 @@ namespace DungeonGraph.Editor
 
             //Debug.Log($"[OrganicGeneration] Successfully mapped {roomInstances.Count} rooms for corridor generation");
 
-            // Generate corridors using the corridor type from tilemap system
+            // Generate corridors using the corridor type from tilemap system with overlap prevention
             //Debug.Log($"[OrganicGeneration] Generating corridors (type: {tilemapSystem.corridorType})...");
-            tilemapSystem.GenerateAllCorridors(graph, roomInstances, tilemapSystem.corridorType);
+            tilemapSystem.GenerateAllCorridorsWithOverlapPrevention(graph, roomInstances, tilemapSystem.corridorType, maxCorridorRegenerations);
 
             //Debug.Log($"[OrganicGeneration] Generated corridors for {roomInstances.Count} rooms!");
         }
@@ -452,6 +518,25 @@ namespace DungeonGraph.Editor
         {
             var adj = BuildAdjacency(graph);
 
+            // Calculate room radii (approximate as half of max dimension)
+            var roomRadii = new Dictionary<string, float>();
+            foreach (var kvp in roomInstances)
+            {
+                var roomObj = kvp.Value;
+                var roomTemplate = roomObj.GetComponent<DungeonGraph.RoomTemplate>();
+                if (roomTemplate != null)
+                {
+                    var bounds = roomTemplate.worldBounds;
+                    // Use the maximum of width/height as the diameter, then halve for radius
+                    float radius = Mathf.Max(bounds.size.x, bounds.size.y) / 2f;
+                    roomRadii[kvp.Key] = radius;
+                }
+                else
+                {
+                    roomRadii[kvp.Key] = 5f; // Default radius
+                }
+            }
+
             // IMPORTANT: Some magic numbers here, needs more iteration/fine-tuning/editor customization
             float springStiffness = 0.01f * stiffnessFactor;  // Attraction force for connected rooms (affected by stiffness factor)
             float repulsionStrength = 50f * repulsionFactor;  // Base repulsion between rooms
@@ -496,8 +581,13 @@ namespace DungeonGraph.Editor
                         {
                             direction /= distance;
 
+                            // Calculate ideal distance for this pair: radiusA + radiusB + gap
+                            float radiusA = roomRadii.ContainsKey(nodeId) ? roomRadii[nodeId] : 5f;
+                            float radiusB = roomRadii.ContainsKey(neighborId) ? roomRadii[neighborId] : 5f;
+                            float pairIdealDistance = radiusA + radiusB + idealDistance;
+
                             // Spring force proportional to distance from ideal
-                            float force = springStiffness * (distance - idealDistance);
+                            float force = springStiffness * (distance - pairIdealDistance);
                             forces[nodeId] += direction * force;
                         }
                     }
@@ -675,6 +765,52 @@ namespace DungeonGraph.Editor
                 adjacency[b].Add(a);
             }
             return adjacency;
+        }
+
+        /// <summary>
+        /// Check if any rooms are overlapping based on their bounds
+        /// </summary>
+        private static bool CheckRoomOverlap(Dictionary<string, GameObject> roomInstances, Dictionary<string, Vector3> roomPositions)
+        {
+            var roomKeys = roomInstances.Keys.ToList();
+
+            for (int i = 0; i < roomKeys.Count; i++)
+            {
+                for (int j = i + 1; j < roomKeys.Count; j++)
+                {
+                    var keyA = roomKeys[i];
+                    var keyB = roomKeys[j];
+
+                    var roomA = roomInstances[keyA];
+                    var roomB = roomInstances[keyB];
+
+                    var templateA = roomA.GetComponent<DungeonGraph.RoomTemplate>();
+                    var templateB = roomB.GetComponent<DungeonGraph.RoomTemplate>();
+
+                    if (templateA == null || templateB == null) continue;
+
+                    // Get bounds at current positions
+                    var boundsA = templateA.worldBounds;
+                    var boundsB = templateB.worldBounds;
+
+                    // Translate bounds to simulation positions
+                    var posA = roomPositions[keyA];
+                    var posB = roomPositions[keyB];
+
+                    // Create bounds centered at simulation positions
+                    var adjustedBoundsA = new Bounds(posA, boundsA.size);
+                    var adjustedBoundsB = new Bounds(posB, boundsB.size);
+
+                    // Check for intersection
+                    if (adjustedBoundsA.Intersects(adjustedBoundsB))
+                    {
+                        //Debug.LogWarning($"[OrganicGeneration] Overlap detected between {roomA.name} and {roomB.name}");
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
     }
 }

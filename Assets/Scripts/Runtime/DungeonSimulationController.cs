@@ -20,6 +20,9 @@ namespace DungeonGraph
             public float chaosFactor = 0.0f;
             public float simulationSpeed = 30f; // iterations per second
             public float idealDistance = 20f; // ideal spring length between connected rooms
+            public bool allowRoomOverlap = false;
+            public int maxRoomRegenerations = 3;
+            public int maxCorridorRegenerations = 3;
         }
 
         // Simulation state
@@ -32,6 +35,12 @@ namespace DungeonGraph
         private SimulationParameters m_params;
         private bool m_isSimulating = false;
         private float m_lerpSpeed = 8f; // Smoothness of position interpolation
+        private int m_regenerationAttempt = 0;
+        private Dictionary<string, Vector3> m_initialPositions; // Store initial positions for regeneration
+        private float m_placementRadius; // Store placement radius for regeneration
+
+        // Public property to access simulation parameters
+        public SimulationParameters Parameters => m_params;
 
         /// <summary>
         /// Start the real-time simulation with the given parameters
@@ -50,9 +59,19 @@ namespace DungeonGraph
             m_roomInstances = roomInstances;
             m_currentPositions = new Dictionary<string, Vector3>(initialPositions);
             m_targetPositions = new Dictionary<string, Vector3>(initialPositions);
+            m_initialPositions = new Dictionary<string, Vector3>(initialPositions); // Store for regeneration
             m_nodeBounds = nodeBounds;
             m_params = parameters;
             m_isSimulating = true;
+            m_regenerationAttempt = 0; // Reset regeneration counter
+
+            // Calculate placement radius for regeneration
+            float totalArea = 0f;
+            foreach (var bounds in nodeBounds.Values)
+            {
+                totalArea += bounds.size.x * bounds.size.y;
+            }
+            m_placementRadius = Mathf.Sqrt(totalArea * parameters.areaPlacementFactor) / 2f;
 
             // Cache center offsets for each room to avoid recalculating every frame
             m_centerOffsets = new Dictionary<string, Vector3>();
@@ -83,6 +102,25 @@ namespace DungeonGraph
             // Calculate graph distances for repulsion scaling
             var graphDistances = CalculateGraphDistances(m_graph);
             var adjacency = BuildAdjacency(m_graph);
+
+            // Calculate room radii (approximate as half of max dimension)
+            var roomRadii = new Dictionary<string, float>();
+            foreach (var kvp in m_roomInstances)
+            {
+                var roomObj = kvp.Value;
+                var roomTemplate = roomObj.GetComponent<RoomTemplate>();
+                if (roomTemplate != null)
+                {
+                    var bounds = roomTemplate.worldBounds;
+                    // Use the maximum of width/height as the diameter, then halve for radius
+                    float radius = Mathf.Max(bounds.size.x, bounds.size.y) / 2f;
+                    roomRadii[kvp.Key] = radius;
+                }
+                else
+                {
+                    roomRadii[kvp.Key] = 5f; // Default radius
+                }
+            }
 
             // Physics parameters
             float springStiffness = 0.01f * m_params.stiffnessFactor;
@@ -129,8 +167,13 @@ namespace DungeonGraph
                         {
                             direction /= distance;
 
-                            // Spring force proportional to distance
-                            float force = springStiffness * (distance - m_params.idealDistance);
+                            // Calculate ideal distance for this pair: radiusA + radiusB + gap
+                            float radiusA = roomRadii.ContainsKey(nodeId) ? roomRadii[nodeId] : 5f;
+                            float radiusB = roomRadii.ContainsKey(neighborId) ? roomRadii[neighborId] : 5f;
+                            float pairIdealDistance = radiusA + radiusB + m_params.idealDistance;
+
+                            // Spring force proportional to distance from ideal
+                            float force = springStiffness * (distance - pairIdealDistance);
                             forces[nodeId] += direction * force;
                         }
                     }
@@ -199,15 +242,15 @@ namespace DungeonGraph
                 float totalEnergy = velocities.Values.Sum(v => v.sqrMagnitude);
 
                 // Log progress every 20 iterations
-                if (iter % 20 == 0)
-                {
-                    Debug.Log($"[DungeonSimulationController] Iteration {iter}/{maxIterations}, Total energy: {totalEnergy:F2}");
-                }
+                // if (iter % 20 == 0)
+                // {
+                //     Debug.Log($"[DungeonSimulationController] Iteration {iter}/{maxIterations}, Total energy: {totalEnergy:F2}");
+                // }
 
                 // In force mode, stop when energy is near zero
                 if (m_params.forceMode && totalEnergy < energyThreshold)
                 {
-                    Debug.Log($"[DungeonSimulationController] Force mode converged at iteration {iter} with energy {totalEnergy:F4}");
+                    //Debug.Log($"[DungeonSimulationController] Force mode converged at iteration {iter} with energy {totalEnergy:F4}");
                     break;
                 }
 
@@ -216,10 +259,39 @@ namespace DungeonGraph
             }
 
             m_isSimulating = false;
-            Debug.Log("[DungeonSimulationController] Simulation complete!");
+            //Debug.Log("[DungeonSimulationController] Simulation complete!");
+
+            // Check for overlap if enabled
+            if (!m_params.allowRoomOverlap && m_regenerationAttempt < m_params.maxRoomRegenerations)
+            {
+                bool hasOverlap = CheckRoomOverlap();
+                if (hasOverlap)
+                {
+                    m_regenerationAttempt++;
+                    Debug.Log($"[DungeonSimulationController] Overlap detected! Restarting simulation (attempt {m_regenerationAttempt}/{m_params.maxRoomRegenerations})");
+
+                    // Restart simulation with new random positions
+                    RestartSimulation();
+                    yield break; // Exit this coroutine, new one will start
+                }
+            }
+
+            // Warn if we hit max regenerations with overlap
+            if (!m_params.allowRoomOverlap && m_regenerationAttempt >= m_params.maxRoomRegenerations)
+            {
+                bool finalOverlap = CheckRoomOverlap();
+                if (finalOverlap)
+                {
+                    Debug.LogWarning($"[DungeonSimulationController] Maximum regenerations ({m_params.maxRoomRegenerations}) reached with room overlap still present. Proceeding with current layout.");
+                }
+            }
+            else if (m_regenerationAttempt > 0)
+            {
+                //Debug.Log($"[DungeonSimulationController] Successfully completed simulation without overlap after {m_regenerationAttempt} regenerations.");
+            }
 
             // Call post-simulation setup using reflection (works in Editor play mode)
-            Debug.Log("[DungeonSimulationController] Attempting to call PostSimulationSetup via reflection...");
+            //Debug.Log("[DungeonSimulationController] Attempting to call PostSimulationSetup via reflection...");
             try
             {
                 // Try multiple assembly names
@@ -386,6 +458,91 @@ namespace DungeonGraph
                 adjacency[b].Add(a);
             }
             return adjacency;
+        }
+
+        /// <summary>
+        /// Check if any rooms are overlapping based on their bounds
+        /// </summary>
+        private bool CheckRoomOverlap()
+        {
+            var roomKeys = m_roomInstances.Keys.ToList();
+
+            for (int i = 0; i < roomKeys.Count; i++)
+            {
+                for (int j = i + 1; j < roomKeys.Count; j++)
+                {
+                    var keyA = roomKeys[i];
+                    var keyB = roomKeys[j];
+
+                    var roomA = m_roomInstances[keyA];
+                    var roomB = m_roomInstances[keyB];
+
+                    var templateA = roomA.GetComponent<RoomTemplate>();
+                    var templateB = roomB.GetComponent<RoomTemplate>();
+
+                    if (templateA == null || templateB == null) continue;
+
+                    // Get bounds at current positions
+                    var boundsA = templateA.worldBounds;
+                    var boundsB = templateB.worldBounds;
+
+                    // Translate bounds to simulation positions
+                    var posA = m_targetPositions[keyA];
+                    var posB = m_targetPositions[keyB];
+
+                    // Create bounds centered at simulation positions
+                    var adjustedBoundsA = new Bounds(posA, boundsA.size);
+                    var adjustedBoundsB = new Bounds(posB, boundsB.size);
+
+                    // Check for intersection
+                    if (adjustedBoundsA.Intersects(adjustedBoundsB))
+                    {
+                        Debug.LogWarning($"[DungeonSimulationController] Overlap detected between {roomA.name} and {roomB.name}");
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Restart simulation with new random positions
+        /// </summary>
+        private void RestartSimulation()
+        {
+            // Generate new random positions for all rooms
+            var newPositions = new Dictionary<string, Vector3>();
+            foreach (var nodeId in m_roomInstances.Keys)
+            {
+                float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+                float distance = Random.Range(0f, m_placementRadius);
+                Vector3 newPos = new Vector3(
+                    Mathf.Cos(angle) * distance,
+                    Mathf.Sin(angle) * distance,
+                    0f
+                );
+                newPositions[nodeId] = newPos;
+            }
+
+            // Reset positions
+            m_currentPositions = new Dictionary<string, Vector3>(newPositions);
+            m_targetPositions = new Dictionary<string, Vector3>(newPositions);
+
+            // Apply initial positions to room objects
+            foreach (var kvp in newPositions)
+            {
+                if (m_roomInstances.ContainsKey(kvp.Key) && m_centerOffsets.ContainsKey(kvp.Key))
+                {
+                    var roomObj = m_roomInstances[kvp.Key];
+                    Vector3 centerOffset = m_centerOffsets[kvp.Key];
+                    roomObj.transform.position = kvp.Value - centerOffset;
+                }
+            }
+
+            // Restart the simulation coroutine
+            m_isSimulating = true;
+            StartCoroutine(SimulationCoroutine());
         }
     }
 }

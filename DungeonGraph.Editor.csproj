@@ -55,6 +55,7 @@
     <Compile Include="Assets\Scripts\Editor\DungeonGraphAssetEditor.cs" />
     <Compile Include="Assets\Scripts\Editor\DungeonGraphView.cs" />
     <Compile Include="Assets\Scripts\Editor\DungeonTilemapSystemEditor.cs" />
+    <Compile Include="Assets\Scripts\Editor\BlankRoomGenerator.cs" />
     <Compile Include="Assets\Scripts\Editor\DungeonGraphEditorWindow.cs" />
   </ItemGroup>
   <ItemGroup>

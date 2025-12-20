@@ -10,17 +10,24 @@ namespace DungeonGraph.Editor
     /// </summary>
     public static class OrganicGeneration
     {
+        // Track spawned rooms per type to prevent duplicates until all are used
+        private static Dictionary<string, List<string>> spawnedRoomsByType = new Dictionary<string, List<string>>();
+
         public static void GenerateRooms(DungeonGraphAsset graph, Transform parent = null,
             float areaPlacementFactor = 2.0f, float repulsionFactor = 1.0f, int simulationIterations = 100,
             bool forceMode = false, float stiffnessFactor = 1.0f, float chaosFactor = 0.0f,
             bool realTimeSimulation = false, float simulationSpeed = 30f, float idealDistance = 20f,
-            bool allowRoomOverlap = false, int maxRoomRegenerations = 3, int maxCorridorRegenerations = 3)
+            bool allowRoomOverlap = false, int maxRoomRegenerations = 3, int maxCorridorRegenerations = 3,
+            string floorPath = "")
         {
             if (graph == null)
             {
                 Debug.LogError("Cannot generate dungeon: graph is null");
                 return;
             }
+
+            // Reset room tracking for new generation
+            spawnedRoomsByType.Clear();
 
             // Create parent container
             if (parent == null)
@@ -40,7 +47,7 @@ namespace DungeonGraph.Editor
             float totalArea = 0f;
             foreach (var node in graph.Nodes)
             {
-                var bounds = GetNodeBounds(node);
+                var bounds = GetNodeBounds(node, floorPath);
                 nodeBounds[node.id] = bounds;
                 totalArea += bounds.size.x * bounds.size.y;
             }
@@ -74,6 +81,9 @@ namespace DungeonGraph.Editor
                     }
                     roomInstances.Clear();
                     roomPositions.Clear();
+
+                    // Reset room tracking so we can use fresh rooms on regeneration
+                    spawnedRoomsByType.Clear();
                 }
 
                 // Instantiate rooms at random positions
@@ -88,7 +98,7 @@ namespace DungeonGraph.Editor
                         0f
                     );
 
-                    var roomObj = InstantiateRoomForNode(node, parent);
+                    var roomObj = InstantiateRoomForNode(node, parent, floorPath);
                     if (roomObj != null)
                     {
                         roomInstances[node.id] = roomObj;
@@ -673,10 +683,13 @@ namespace DungeonGraph.Editor
         }
 
         // Helper methods from ConstraintGeneration
-        private static Bounds GetNodeBounds(DungeonGraphNode node)
+        private static Bounds GetNodeBounds(DungeonGraphNode node, string floorPath = "")
         {
             string typeName = node.GetType().Name;
             string folderPath;
+
+            // Use floor path if provided, otherwise fall back to legacy path
+            string basePath = string.IsNullOrEmpty(floorPath) ? "Assets/Rooms" : floorPath;
 
             if (typeName.Contains("Basic"))
             {
@@ -684,12 +697,16 @@ namespace DungeonGraph.Editor
                 var sizeField = node.GetType().GetField("size");
                 if (sizeField != null)
                     sizeCategory = sizeField.GetValue(node).ToString();
-                folderPath = $"Assets/Rooms/Basic/{sizeCategory}";
+                folderPath = $"{basePath}/Basic/{sizeCategory}";
+            }
+            else if (node is CustomNode customNode)
+            {
+                folderPath = $"{basePath}/{customNode.customTypeName}";
             }
             else
             {
                 string typeFolder = typeName.Replace("Node", "");
-                folderPath = $"Assets/Rooms/{typeFolder}";
+                folderPath = $"{basePath}/{typeFolder}";
             }
 
             string[] prefabGUIDs = AssetDatabase.FindAssets("t:Prefab", new[] { folderPath });
@@ -710,23 +727,30 @@ namespace DungeonGraph.Editor
             return new Bounds(Vector3.zero, new Vector3(10f, 10f, 1f));
         }
 
-        private static GameObject InstantiateRoomForNode(DungeonGraphNode node, Transform parent = null)
+        private static GameObject InstantiateRoomForNode(DungeonGraphNode node, Transform parent = null, string floorPath = "")
         {
             string typeName = node.GetType().Name;
             string folderPath;
 
-            if (typeName.Contains("Basic"))
+            // Use floor path if provided, otherwise fall back to legacy path
+            string basePath = string.IsNullOrEmpty(floorPath) ? "Assets/Rooms" : floorPath;
+
+            if (typeName == "BasicNode")
             {
                 string sizeCategory = "Small";
                 var sizeField = node.GetType().GetField("size");
                 if (sizeField != null)
                     sizeCategory = sizeField.GetValue(node).ToString();
-                folderPath = $"Assets/Rooms/Basic/{sizeCategory}";
+                folderPath = $"{basePath}/Basic/{sizeCategory}";
+            }
+            else if (node is CustomNode customNode)
+            {
+                folderPath = $"{basePath}/{customNode.customTypeName}";
             }
             else
             {
                 string typeFolder = typeName.Replace("Node", "");
-                folderPath = $"Assets/Rooms/{typeFolder}";
+                folderPath = $"{basePath}/{typeFolder}";
             }
 
             string[] prefabGUIDs = AssetDatabase.FindAssets("t:Prefab", new[] { folderPath });
@@ -736,13 +760,76 @@ namespace DungeonGraph.Editor
                 return null;
             }
 
-            string prefabPath = AssetDatabase.GUIDToAssetPath(prefabGUIDs[Random.Range(0, prefabGUIDs.Length)]);
+            // Convert GUIDs to paths
+            string[] allPrefabPaths = prefabGUIDs.Select(guid => AssetDatabase.GUIDToAssetPath(guid)).ToArray();
+
+            // Initialize tracking for this folder type if not already done
+            string typeKey = folderPath; // Use folder path as unique key for this room type
+            if (!spawnedRoomsByType.ContainsKey(typeKey))
+            {
+                spawnedRoomsByType[typeKey] = new List<string>();
+            }
+
+            // Get list of available (not yet spawned) rooms
+            var availablePrefabs = allPrefabPaths.Where(path => !spawnedRoomsByType[typeKey].Contains(path)).ToList();
+
+            // If all rooms have been spawned, reset the tracking to allow duplicates
+            if (availablePrefabs.Count == 0)
+            {
+                //Debug.Log($"[OrganicGeneration] All {allPrefabPaths.Length} rooms of type '{typeKey}' have been spawned. Resetting to allow duplicates.");
+                spawnedRoomsByType[typeKey].Clear();
+                availablePrefabs = allPrefabPaths.ToList();
+            }
+
+            // Randomly select from available prefabs
+            string prefabPath = availablePrefabs[Random.Range(0, availablePrefabs.Count)];
+
+            //Debug.Log($"[OrganicGeneration] Selected room from {typeKey}: {System.IO.Path.GetFileNameWithoutExtension(prefabPath)} ({availablePrefabs.Count}/{allPrefabPaths.Length} available)");
+
+            // Track this prefab as spawned
+            spawnedRoomsByType[typeKey].Add(prefabPath);
+
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+
+            // DEBUG: Check prefab's exits BEFORE instantiation
+            var prefabTemplate = prefab.GetComponent<DungeonGraph.RoomTemplate>();
+            if (prefabTemplate != null)
+            {
+                int prefabExitCount = prefabTemplate.exits != null ? prefabTemplate.exits.Length : 0;
+                //Debug.Log($"[OrganicGeneration] PREFAB {prefab.name} has {prefabExitCount} exits in array");
+            }
+
             GameObject roomObj = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             if (parent != null) roomObj.transform.SetParent(parent);
 
             string simpleType = typeName.Replace("Node", "");
             roomObj.name = $"{simpleType} Room";
+
+            // Ensure exits are populated (fixes prefab instantiation issue where exits array can be empty)
+            var roomTemplate = roomObj.GetComponent<DungeonGraph.RoomTemplate>();
+            if (roomTemplate != null)
+            {
+                // DEBUG: Check exits BEFORE repopulation
+                int beforeCount = roomTemplate.exits != null ? roomTemplate.exits.Length : 0;
+                //Debug.Log($"[OrganicGeneration] INSTANCE {roomObj.name} has {beforeCount} exits BEFORE repopulation");
+
+                roomTemplate.RepopulateExitsIfNeeded();
+
+                // Log the status for debugging
+                if (roomTemplate.exits != null && roomTemplate.exits.Length > 0)
+                {
+                    int validExits = 0;
+                    foreach (var exit in roomTemplate.exits)
+                    {
+                        if (exit != null) validExits++;
+                    }
+                    //Debug.Log($"[OrganicGeneration] INSTANCE {roomObj.name} has {validExits} valid exits out of {roomTemplate.exits.Length} AFTER repopulation");
+                }
+                else
+                {
+                    //Debug.LogWarning($"[OrganicGeneration] {roomObj.name} has no exits defined after repopulation attempt");
+                }
+            }
 
             // Add node reference component for corridor generation
             var nodeRef = roomObj.AddComponent<RoomNodeReference>();

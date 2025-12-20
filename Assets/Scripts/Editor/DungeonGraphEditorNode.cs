@@ -5,6 +5,7 @@ using UnityEditor;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using UnityEngine;
 
 
 namespace DungeonGraph.Editor
@@ -33,14 +34,33 @@ namespace DungeonGraph.Editor
             Type typeInfo = node.GetType();
             NodeInfoAttribute info = typeInfo.GetCustomAttribute<NodeInfoAttribute>();
 
-            title = info.title;
+            // Check if this is a custom node and store reference
+            CustomNode customNodeRef = node as CustomNode;
+
+            // Set title based on node type
+            if (customNodeRef != null)
+            {
+                title = customNodeRef.customTypeName;
+            }
+            else if (info != null)
+            {
+                title = info.title;
+            }
+            else
+            {
+                title = typeInfo.Name;
+            }
 
             m_ports = new List<Port>();
 
-            string[] depths = info.menuItem.Split('/');
-            foreach (string depth in depths)
+            // Add class lists for categorization (skip for custom nodes without NodeInfo)
+            if (info != null && !string.IsNullOrEmpty(info.menuItem))
             {
-                this.AddToClassList(depth.ToLower().Replace(' ', '-'));
+                string[] depths = info.menuItem.Split('/');
+                foreach (string depth in depths)
+                {
+                    this.AddToClassList(depth.ToLower().Replace(' ', '-'));
+                }
             }
             this.name = typeInfo.Name;
 
@@ -66,7 +86,14 @@ namespace DungeonGraph.Editor
 
             // Add style classes for theming via USS
             this.AddToClassList("dungeon-node");
-            if (info != null && !string.IsNullOrEmpty(info.title))
+
+            // Check if this is a custom node and apply custom styling
+            if (customNodeRef != null)
+            {
+                this.AddToClassList("node-custom");
+                ApplyCustomNodeColors(customNodeRef);
+            }
+            else if (info != null && !string.IsNullOrEmpty(info.title))
             {
                 var slug = info.title.Trim().ToLower().Replace(' ', '-');
                 this.AddToClassList($"node-{slug}"); // e.g., node-start, node-basic, node-hub, node-end, node-debug
@@ -187,6 +214,36 @@ namespace DungeonGraph.Editor
         public void SavePosition()
         {
             m_graphNode.SetPosition(GetPosition());
+        }
+
+        private void ApplyCustomNodeColors(CustomNode customNode)
+        {
+            Color nodeColor = customNode.customColor;
+
+            // Apply colors to the center jack
+            var centerJack = m_centerPortContainer.Q<VisualElement>("center-jack");
+            if (centerJack != null)
+            {
+                centerJack.style.backgroundColor = new StyleColor(nodeColor);
+            }
+
+            // Create a darker tinted background color
+            Color backgroundColor = new Color(
+                nodeColor.r * 0.1f,
+                nodeColor.g * 0.1f,
+                nodeColor.b * 0.1f,
+                1f
+            );
+
+            // Apply to main container
+            if (mainContainer != null)
+            {
+                mainContainer.style.backgroundColor = new StyleColor(backgroundColor);
+                mainContainer.style.borderTopColor = new StyleColor(nodeColor);
+                mainContainer.style.borderBottomColor = new StyleColor(nodeColor);
+                mainContainer.style.borderLeftColor = new StyleColor(nodeColor);
+                mainContainer.style.borderRightColor = new StyleColor(nodeColor);
+            }
         }
     }
 }

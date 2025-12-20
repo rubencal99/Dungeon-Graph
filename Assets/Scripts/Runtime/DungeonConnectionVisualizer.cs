@@ -24,12 +24,13 @@ namespace DungeonGraph
         // Node type colors matching the GraphView USS
         private static readonly Dictionary<string, Color> s_nodeColors = new Dictionary<string, Color>
         {
-            { "Start", new Color(0.114f, 0.725f, 0.329f) },     // #1db954 green
-            { "Basic", new Color(0.376f, 0.647f, 0.980f) },     // #60a5fa blue
-            { "Hub", new Color(0.655f, 0.545f, 0.980f) },       // #a78bfa purple
-            { "End", new Color(0.973f, 0.443f, 0.443f) },       // #f87171 red
+            { "Start", new Color(0.000f, 0.392f, 0.000f) },     // #006400 dark green
+            { "Basic", new Color(0.000f, 0.000f, 0.545f) },     // #00008B deep blue
+            { "Hub", new Color(0.255f, 0.106f, 0.545f) },       // #411B8B royal purple
+            { "End", new Color(1.000f, 0.549f, 0.000f) },       // #FF8C00 bright orange
             { "Debug", new Color(0.984f, 0.749f, 0.141f) },     // #fbbf24 yellow
-            { "Boss", new Color(0.984f, 0.141f, 0.141f) }       // #fb2424 red
+            { "Boss", new Color(0.984f, 0.141f, 0.141f) },      // #fb2424 red
+            { "Reward", new Color(0.980f, 0.843f, 0.000f) }     // #fad700 gold
         };
 
         private void OnDrawGizmos()

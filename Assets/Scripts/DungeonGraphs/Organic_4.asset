@@ -17,7 +17,6 @@ MonoBehaviour:
   - rid: 2036059415770824893
   - rid: 2036059415770824895
   - rid: 1121361366720708669
-  - rid: 1121361366720708670
   - rid: 1121361366720708671
   - rid: 1121361366720708672
   - rid: 1121361366720708673
@@ -25,18 +24,16 @@ MonoBehaviour:
   - rid: 1121361366720708675
   - rid: 1121361381793202236
   - rid: 1121361381793202237
+  - rid: 1121361551742206013
+  - rid: 1121361551742206014
+  - rid: 1121361551742206015
+  - rid: 1121361574758711362
   m_connections:
   - inputPort:
       nodeId: 470d1bc9-59bc-4d28-96aa-3850970e7e6b
       portIndex: 0
     outputPort:
       nodeId: 74ec9596-f7cd-4159-b5bd-2b44a52aed47
-      portIndex: 1
-  - inputPort:
-      nodeId: 55507245-9e05-4199-a676-4c1df26be581
-      portIndex: 0
-    outputPort:
-      nodeId: f0b89371-70bd-4961-8a55-5e8a06fcd1f4
       portIndex: 1
   - inputPort:
       nodeId: 55507245-9e05-4199-a676-4c1df26be581
@@ -51,12 +48,6 @@ MonoBehaviour:
       nodeId: 796a1553-7fc8-45f5-8fe4-9b745fc4483d
       portIndex: 1
   - inputPort:
-      nodeId: dbde3753-86ca-46f4-8f1a-f82d0f2b57e9
-      portIndex: 1
-    outputPort:
-      nodeId: f0b89371-70bd-4961-8a55-5e8a06fcd1f4
-      portIndex: 0
-  - inputPort:
       nodeId: 55507245-9e05-4199-a676-4c1df26be581
       portIndex: 1
     outputPort:
@@ -110,6 +101,30 @@ MonoBehaviour:
     outputPort:
       nodeId: 73c50c1d-0b44-487a-9189-c175e36bf372
       portIndex: 1
+  - inputPort:
+      nodeId: 55507245-9e05-4199-a676-4c1df26be581
+      portIndex: 1
+    outputPort:
+      nodeId: de46b82f-ed78-48fa-a1f5-7691fc53d914
+      portIndex: 0
+  - inputPort:
+      nodeId: 575b113f-fe32-4260-a2de-96cad3923c60
+      portIndex: 0
+    outputPort:
+      nodeId: 80c39270-1be6-4c42-af58-ada5e9894002
+      portIndex: 1
+  - inputPort:
+      nodeId: 785d36c0-588c-4f0a-912a-9861cf4110b9
+      portIndex: 1
+    outputPort:
+      nodeId: fe969c13-9c44-4757-9fc6-debb54e2a3d7
+      portIndex: 0
+  - inputPort:
+      nodeId: 91cf8da0-f8a5-40a5-a474-730eaa3874c0
+      portIndex: 1
+    outputPort:
+      nodeId: fe969c13-9c44-4757-9fc6-debb54e2a3d7
+      portIndex: 0
   references:
     version: 2
     RefIds:
@@ -125,19 +140,6 @@ MonoBehaviour:
           height: 45.333313
         typeName: DungeonGraph.HubNode, DungeonGraph.Runtime, Version=0.0.0.0, Culture=neutral,
           PublicKeyToken=null
-    - rid: 1121361366720708670
-      type: {class: BasicNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
-      data:
-        m_guid: f0b89371-70bd-4961-8a55-5e8a06fcd1f4
-        m_position:
-          serializedVersion: 2
-          x: -168
-          y: 384
-          width: 201.33334
-          height: 66.66666
-        typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
-          Culture=neutral, PublicKeyToken=null
-        size: 0
     - rid: 1121361366720708671
       type: {class: BasicNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
       data:
@@ -229,6 +231,57 @@ MonoBehaviour:
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1
+    - rid: 1121361551742206013
+      type: {class: RewardNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: de46b82f-ed78-48fa-a1f5-7691fc53d914
+        m_position:
+          serializedVersion: 2
+          x: -59.333374
+          y: 426.6667
+          width: 0
+          height: 0
+        typeName: DungeonGraph.RewardNode, DungeonGraph.Runtime, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+    - rid: 1121361551742206014
+      type: {class: RewardNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: 575b113f-fe32-4260-a2de-96cad3923c60
+        m_position:
+          serializedVersion: 2
+          x: -445.10968
+          y: 208.86684
+          width: 0
+          height: 0
+        typeName: DungeonGraph.RewardNode, DungeonGraph.Runtime, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+    - rid: 1121361551742206015
+      type: {class: RewardNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: fe969c13-9c44-4757-9fc6-debb54e2a3d7
+        m_position:
+          serializedVersion: 2
+          x: -583.3333
+          y: 762.6667
+          width: 90.66666
+          height: 45.333313
+        typeName: DungeonGraph.RewardNode, DungeonGraph.Runtime, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+    - rid: 1121361574758711362
+      type: {class: CustomNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
+      data:
+        m_guid: 91cf8da0-f8a5-40a5-a474-730eaa3874c0
+        m_position:
+          serializedVersion: 2
+          x: -437.33337
+          y: 889.3334
+          width: 0
+          height: 0
+        typeName: DungeonGraph.CustomNode, DungeonGraph.Runtime, Version=0.0.0.0,
+          Culture=neutral, PublicKeyToken=null
+        m_customTypeGuid: eead5d32-24cb-4227-9f9a-51fd700822a8
+        m_customTypeName: Shop
+        m_customColor: {r: 1, g: 1, b: 1, a: 1}
     - rid: 2036059381359444162
       type: {class: StartNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
       data:

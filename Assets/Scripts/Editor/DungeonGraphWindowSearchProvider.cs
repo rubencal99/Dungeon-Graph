@@ -13,11 +13,13 @@ namespace DungeonGraph.Editor
     {
         public object target { get; private set; }
         public string title { get; private set; }
+        public bool isCreateNewNodeTypeEntry { get; private set; }
 
-        public SearchContextElement(object target, string title)
+        public SearchContextElement(object target, string title, bool isCreateNewNodeType = false)
         {
             this.target = target;
             this.title = title;
+            this.isCreateNewNodeTypeEntry = isCreateNewNodeType;
         }
     }
 
@@ -26,13 +28,19 @@ namespace DungeonGraph.Editor
         public DungeonGraphView graph;
         public VisualElement target;
         public static List<SearchContextElement> elements;
+
+        private Vector2 m_contextScreenPosition;
+
         public List<SearchTreeEntry> CreateSearchTree(SearchWindowContext context)
         {
+            m_contextScreenPosition = context.screenMousePosition;
+
             List<SearchTreeEntry> tree = new List<SearchTreeEntry>();
             tree.Add(new SearchTreeGroupEntry(new GUIContent("Nodes"), 0));
 
             elements = new List<SearchContextElement>();
 
+            // Add standard node types from attributes
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
             foreach (Assembly assembly in assemblies)
             {
@@ -51,6 +59,15 @@ namespace DungeonGraph.Editor
                         }
                     }
                 }
+            }
+
+            // Add custom node types from registry
+            var registry = CustomNodeTypeRegistry.GetOrCreateDefault();
+            foreach (var customType in registry.customNodeTypes)
+            {
+                var customNode = new CustomNode();
+                customNode.Initialize(customType);
+                elements.Add(new SearchContextElement(customNode, $"Custom/{customType.typeName}"));
             }
 
             // Sort by name
@@ -99,15 +116,48 @@ namespace DungeonGraph.Editor
                 tree.Add(entry);
             }
 
+            // Add separator and "Create New Node Type" button at the bottom
+            tree.Add(new SearchTreeEntry(new GUIContent("")) { level = 1 }); // Separator
+            SearchTreeEntry createNewEntry = new SearchTreeEntry(new GUIContent("+ Create New Node Type"))
+            {
+                level = 1,
+                userData = new SearchContextElement(null, "CreateNewNodeType", true)
+            };
+            tree.Add(createNewEntry);
+
             return tree;
         }
 
         public bool OnSelectEntry(SearchTreeEntry SearchTreeEntry, SearchWindowContext context)
         {
+            SearchContextElement element = (SearchContextElement)SearchTreeEntry.userData;
+
+            // Check if this is the "Create New Node Type" entry
+            if (element.isCreateNewNodeTypeEntry)
+            {
+                CreateCustomNodeTypeWindow.ShowWindow((typeName, color) =>
+                {
+                    var registry = CustomNodeTypeRegistry.GetOrCreateDefault();
+                    if (registry.AddCustomNodeType(typeName, color))
+                    {
+                        // Create folders for this node type in all existing floors
+                        DungeonFloorManager.CreateNodeFolderInAllFloors(typeName);
+
+                        UnityEditor.EditorUtility.DisplayDialog("Success",
+                            $"Custom node type '{typeName}' has been created and added to all dungeon floors!", "OK");
+                    }
+                    else
+                    {
+                        UnityEditor.EditorUtility.DisplayDialog("Error",
+                            $"Failed to create node type '{typeName}'. A type with this name may already exist.", "OK");
+                    }
+                });
+                return true;
+            }
+
+            // Standard node creation
             var windowMousePosition = graph.ChangeCoordinatesTo(graph, context.screenMousePosition - graph.window.position.position);
             var graphMousePosition = graph.contentViewContainer.WorldToLocal(windowMousePosition);
-
-            SearchContextElement element = (SearchContextElement)SearchTreeEntry.userData;
 
             DungeonGraphNode node = (DungeonGraphNode)element.target;
             node.SetPosition(new Rect(graphMousePosition, new Vector2()));

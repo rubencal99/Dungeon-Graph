@@ -40,10 +40,18 @@ namespace DungeonGraph.Editor
         private int m_maxRoomRegenerations = 3;
         private int m_maxCorridorRegenerations = 3;
 
+        // UI toggle for advanced parameters
+        private bool m_showAdvanced = false;
+
         // Corridor generation parameters
         private UnityEngine.Tilemaps.TileBase m_corridorTile = null;
         private int m_corridorWidth = 2;
         private CorridorType m_corridorType = CorridorType.Direct;
+
+        // Floor selection
+        private List<DungeonFloorConfig> m_availableFloors = new List<DungeonFloorConfig>();
+        private int m_selectedFloorIndex = 0;
+        private string m_currentFloorPath = "";
 
         // EditorPrefs keys for persistence
         private const string PREF_AREA_PLACEMENT = "DungeonGraph.AreaPlacement";
@@ -61,6 +69,8 @@ namespace DungeonGraph.Editor
         private const string PREF_CORRIDOR_TILE = "DungeonGraph.CorridorTile";
         private const string PREF_CORRIDOR_WIDTH = "DungeonGraph.CorridorWidth";
         private const string PREF_CORRIDOR_TYPE = "DungeonGraph.CorridorType";
+        private const string PREF_SHOW_ADVANCED = "DungeonGraph.ShowAdvanced";
+        private const string PREF_SELECTED_FLOOR = "DungeonGraph.SelectedFloor";
 
         public DungeonGraphView(SerializedObject serializedObject, DungeonGraphEditorWindow window)
         {
@@ -142,151 +152,20 @@ namespace DungeonGraph.Editor
             if (addButton != null)
                 addButton.style.display = DisplayStyle.None;
 
-            // Create a section to hold actions
-            var actions = new BlackboardSection { title = "Actions" };
-            m_toolsBoard.Add(actions);
+            // Create a styled header for Actions
+            var actionsHeader = new Label("Actions");
+            actionsHeader.AddToClassList("section-header");
+            m_toolsBoard.Add(actionsHeader);
 
-            // Organic generation parameters
-            var organicParams = new BlackboardSection { title = "Organic Parameters" };
-            organicParams.name = "organic-params";
-
-            var areaField = new FloatField("Area Placement Factor") { value = m_areaPlacementFactor };
-            areaField.RegisterValueChangedCallback(evt =>
-            {
-                m_areaPlacementFactor = evt.newValue;
-                SavePreferences();
-            });
-            organicParams.Add(areaField);
-
-            var repulsionField = new FloatField("Repulsion Factor") { value = m_repulsionFactor };
-            repulsionField.RegisterValueChangedCallback(evt =>
-            {
-                m_repulsionFactor = evt.newValue;
-                SavePreferences();
-            });
-            organicParams.Add(repulsionField);
-
-            var iterationsField = new IntegerField("Simulation Iterations") { value = m_simulationIterations };
-            iterationsField.RegisterValueChangedCallback(evt =>
-            {
-                m_simulationIterations = evt.newValue;
-                SavePreferences();
-            });
-            organicParams.Add(iterationsField);
-
-            var forceModeToggle = new Toggle("Force Mode") { value = m_forceMode };
-            forceModeToggle.RegisterValueChangedCallback(evt =>
-            {
-                m_forceMode = evt.newValue;
-                SavePreferences();
-            });
-            organicParams.Add(forceModeToggle);
-
-            var stiffnessSlider = new Slider("Stiffness Factor", 0.1f, 5.0f) { value = m_stiffnessFactor };
-            stiffnessSlider.RegisterValueChangedCallback(evt =>
-            {
-                m_stiffnessFactor = evt.newValue;
-                SavePreferences();
-            });
-            organicParams.Add(stiffnessSlider);
-
-            var chaosSlider = new Slider("Chaos Factor", 0.0f, 1.0f) { value = m_chaosFactor };
-            chaosSlider.RegisterValueChangedCallback(evt =>
-            {
-                m_chaosFactor = evt.newValue;
-                SavePreferences();
-            });
-            organicParams.Add(chaosSlider);
-
-            var idealDistanceSlider = new Slider("Ideal Distance", 5f, 50f) { value = m_idealDistance };
-            idealDistanceSlider.showInputField = true; // Show numeric input field
-            idealDistanceSlider.RegisterValueChangedCallback(evt =>
-            {
-                m_idealDistance = evt.newValue;
-                SavePreferences();
-            });
-            organicParams.Add(idealDistanceSlider);
-
-            var realTimeToggle = new Toggle("Real-Time Simulation") { value = m_realTimeSimulation };
-            realTimeToggle.RegisterValueChangedCallback(evt =>
-            {
-                m_realTimeSimulation = evt.newValue;
-                SavePreferences();
-            });
-            organicParams.Add(realTimeToggle);
-
-            var speedSlider = new Slider("Simulation Speed (iter/s)", 1f, 1000f) { value = m_simulationSpeed };
-            speedSlider.showInputField = true; // Show numeric input field
-            speedSlider.RegisterValueChangedCallback(evt =>
-            {
-                m_simulationSpeed = evt.newValue;
-                SavePreferences();
-            });
-            organicParams.Add(speedSlider);
-
-            var allowOverlapToggle = new Toggle("Allow Room Overlap") { value = m_allowRoomOverlap };
-            allowOverlapToggle.RegisterValueChangedCallback(evt =>
-            {
-                m_allowRoomOverlap = evt.newValue;
-                SavePreferences();
-            });
-            organicParams.Add(allowOverlapToggle);
-
-            var maxRoomRegenerationsField = new IntegerField("Max Room Regenerations") { value = m_maxRoomRegenerations };
-            maxRoomRegenerationsField.RegisterValueChangedCallback(evt =>
-            {
-                m_maxRoomRegenerations = evt.newValue;
-                SavePreferences();
-            });
-            organicParams.Add(maxRoomRegenerationsField);
-
-            m_toolsBoard.Add(organicParams);
-
-            // Corridor parameters section
-            var corridorParams = new BlackboardSection { title = "Corridor Settings" };
-
-            var corridorTileField = new ObjectField("Corridor Tile")
-            {
-                objectType = typeof(UnityEngine.Tilemaps.TileBase),
-                value = m_corridorTile
-            };
-            corridorTileField.RegisterValueChangedCallback(evt =>
-            {
-                m_corridorTile = evt.newValue as UnityEngine.Tilemaps.TileBase;
-                SavePreferences();
-            });
-            corridorParams.Add(corridorTileField);
-
-            var corridorWidthField = new IntegerField("Corridor Width") { value = m_corridorWidth };
-            corridorWidthField.RegisterValueChangedCallback(evt =>
-            {
-                m_corridorWidth = evt.newValue;
-                SavePreferences();
-            });
-            corridorParams.Add(corridorWidthField);
-
-            var corridorTypeField = new EnumField("Corridor Type", m_corridorType);
-            corridorTypeField.RegisterValueChangedCallback(evt =>
-            {
-                m_corridorType = (CorridorType)evt.newValue;
-                SavePreferences();
-            });
-            corridorParams.Add(corridorTypeField);
-
-            var maxCorridorRegenerationsField = new IntegerField("Max Corridor Regenerations") { value = m_maxCorridorRegenerations };
-            maxCorridorRegenerationsField.RegisterValueChangedCallback(evt =>
-            {
-                m_maxCorridorRegenerations = evt.newValue;
-                SavePreferences();
-            });
-            corridorParams.Add(maxCorridorRegenerationsField);
-
-            m_toolsBoard.Add(corridorParams);
+            // Create a container for action buttons
+            var actions = new VisualElement();
+            actions.style.marginBottom = 10;
 
             // Generation buttons
             var generateDungeonBtn = new Button(GenerateDungeon)
             {
-                text = "Generate Dungeon"
+                text = "Generate Dungeon",
+                tooltip = "Generate complete dungeon with rooms and corridors"
             };
             generateDungeonBtn.style.height = 35;
             generateDungeonBtn.style.marginBottom = 6;
@@ -299,7 +178,8 @@ namespace DungeonGraph.Editor
 
             var generateRoomsBtn = new Button(GenerateRooms)
             {
-                text = "Generate Rooms"
+                text = "Generate Rooms",
+                tooltip = "Generate only rooms using physics simulation"
             };
             generateRoomsBtn.style.height = 28;
             generateRoomsBtn.style.flexGrow = 1;
@@ -308,7 +188,8 @@ namespace DungeonGraph.Editor
 
             var generateCorridorsBtn = new Button(GenerateCorridors)
             {
-                text = "Generate Corridors"
+                text = "Generate Corridors",
+                tooltip = "Generate corridors connecting existing rooms"
             };
             generateCorridorsBtn.style.height = 28;
             generateCorridorsBtn.style.flexGrow = 1;
@@ -319,11 +200,258 @@ namespace DungeonGraph.Editor
             // Clear button
             var clearBtn = new Button(ClearDungeon)
             {
-                text = "Clear Dungeon"
+                text = "Clear Dungeon",
+                tooltip = "Remove all generated rooms and corridors"
             };
             clearBtn.style.height = 28;
             clearBtn.style.marginTop = 6;
             actions.Add(clearBtn);
+
+            m_toolsBoard.Add(actions);
+
+            // ===== FLOOR SELECTION =====
+            var floorHeader = new Label("Dungeon Floor");
+            floorHeader.AddToClassList("section-header");
+            floorHeader.style.marginTop = 10;
+            m_toolsBoard.Add(floorHeader);
+
+            var floorContainer = new VisualElement();
+            floorContainer.style.marginBottom = 10;
+
+            // Floor dropdown
+            var floorDropdown = new UnityEngine.UIElements.PopupField<DungeonFloorConfig>(
+                "Selected Floor",
+                m_availableFloors,
+                m_selectedFloorIndex >= 0 && m_selectedFloorIndex < m_availableFloors.Count ? m_availableFloors[m_selectedFloorIndex] : null
+            );
+            floorDropdown.tooltip = "Select which dungeon floor to use for room generation";
+            floorDropdown.RegisterValueChangedCallback(evt =>
+            {
+                m_selectedFloorIndex = m_availableFloors.IndexOf(evt.newValue);
+                UpdateCurrentFloorPath();
+                SavePreferences();
+            });
+            floorContainer.Add(floorDropdown);
+
+            // Create New Floor button
+            var createFloorBtn = new Button(() =>
+            {
+                CreateFloorWindow.ShowWindow((floorName) =>
+                {
+                    if (DungeonFloorManager.CreateNewFloor(floorName))
+                    {
+                        // Refresh floor list
+                        m_availableFloors = DungeonFloorManager.GetAllFloors();
+                        m_selectedFloorIndex = m_availableFloors.FindIndex(f => f.floorName == floorName);
+                        UpdateCurrentFloorPath();
+                        SavePreferences();
+
+                        // Rebuild tools panel to update dropdown
+                        m_toolsBoard.Clear();
+                        BuildToolsPanel();
+
+                        EditorUtility.DisplayDialog("Success",
+                            $"Floor '{floorName}' created successfully with all standard node folders!", "OK");
+                    }
+                    else
+                    {
+                        EditorUtility.DisplayDialog("Error",
+                            $"Failed to create floor '{floorName}'. It may already exist.", "OK");
+                    }
+                });
+            })
+            {
+                text = "Create New Floor",
+                tooltip = "Create a new dungeon floor with all node type folders"
+            };
+            createFloorBtn.style.height = 24;
+            createFloorBtn.style.marginTop = 4;
+            floorContainer.Add(createFloorBtn);
+
+            m_toolsBoard.Add(floorContainer);
+
+            // ===== BASIC SETTINGS =====
+            var basicSettingsHeader = new Label("Basic Settings");
+            basicSettingsHeader.AddToClassList("section-header");
+            basicSettingsHeader.style.marginTop = 10;
+            m_toolsBoard.Add(basicSettingsHeader);
+
+            // ===== ROOM SETTINGS =====
+            var roomSettings = new BlackboardSection { title = "Room Settings" };
+            roomSettings.name = "room-settings";
+
+            var idealDistanceSlider = new Slider("Ideal Distance", 5f, 50f) { value = m_idealDistance };
+            idealDistanceSlider.showInputField = true;
+            idealDistanceSlider.tooltip = "Target distance between connected rooms";
+            idealDistanceSlider.RegisterValueChangedCallback(evt =>
+            {
+                m_idealDistance = evt.newValue;
+                SavePreferences();
+            });
+            roomSettings.Add(idealDistanceSlider);
+
+            var repulsionField = new Slider("Repulsion Factor", 0.1f, 5.0f) { value = m_repulsionFactor };
+            repulsionField.showInputField = true;
+            repulsionField.tooltip = "Strength of repulsion between rooms to prevent overlap";
+            repulsionField.RegisterValueChangedCallback(evt =>
+            {
+                m_repulsionFactor = evt.newValue;
+                SavePreferences();
+            });
+            roomSettings.Add(repulsionField);
+
+            var stiffnessSlider = new Slider("Stiffness Factor", 0.1f, 5.0f) { value = m_stiffnessFactor };
+            stiffnessSlider.showInputField = true;
+            stiffnessSlider.tooltip = "How strongly rooms are pulled toward their ideal distance";
+            stiffnessSlider.RegisterValueChangedCallback(evt =>
+            {
+                m_stiffnessFactor = evt.newValue;
+                SavePreferences();
+            });
+            roomSettings.Add(stiffnessSlider);
+
+            var iterationsField = new IntegerField("Simulation Iterations") { value = m_simulationIterations };
+            iterationsField.tooltip = "Number of physics iterations to run (higher = more stable layout)";
+            iterationsField.RegisterValueChangedCallback(evt =>
+            {
+                m_simulationIterations = evt.newValue;
+                SavePreferences();
+            });
+            roomSettings.Add(iterationsField);
+
+            // Create speed slider first so it can be referenced by toggle
+            var speedSlider = new Slider("Simulation Speed", 1f, 1000f) { value = m_simulationSpeed };
+            speedSlider.showInputField = true;
+            speedSlider.tooltip = "Iterations per second during real-time simulation";
+            speedSlider.SetEnabled(m_realTimeSimulation); // Initially set based on toggle state
+            speedSlider.RegisterValueChangedCallback(evt =>
+            {
+                m_simulationSpeed = evt.newValue;
+                SavePreferences();
+            });
+
+            var realTimeToggle = new Toggle("Real-Time Simulation") { value = m_realTimeSimulation };
+            realTimeToggle.tooltip = "Animate the physics simulation in real-time instead of instant generation";
+            realTimeToggle.RegisterValueChangedCallback(evt =>
+            {
+                m_realTimeSimulation = evt.newValue;
+                SavePreferences();
+                // Update the enabled state of speed slider
+                speedSlider.SetEnabled(evt.newValue);
+            });
+            roomSettings.Add(realTimeToggle);
+            roomSettings.Add(speedSlider);
+
+            m_toolsBoard.Add(roomSettings);
+
+            // ===== CORRIDOR SETTINGS =====
+            var corridorSettings = new BlackboardSection { title = "Corridor Settings" };
+            corridorSettings.name = "corridor-settings";
+
+            var corridorTileField = new ObjectField("Corridor Tile")
+            {
+                objectType = typeof(UnityEngine.Tilemaps.TileBase),
+                value = m_corridorTile,
+                tooltip = "Tile used to paint corridors connecting rooms"
+            };
+            corridorTileField.RegisterValueChangedCallback(evt =>
+            {
+                m_corridorTile = evt.newValue as UnityEngine.Tilemaps.TileBase;
+                SavePreferences();
+            });
+            corridorSettings.Add(corridorTileField);
+
+            var corridorWidthField = new IntegerField("Corridor Width") { value = m_corridorWidth };
+            corridorWidthField.tooltip = "Width of corridors in tiles";
+            corridorWidthField.RegisterValueChangedCallback(evt =>
+            {
+                m_corridorWidth = evt.newValue;
+                SavePreferences();
+            });
+            corridorSettings.Add(corridorWidthField);
+
+            var corridorTypeField = new EnumField("Corridor Type", m_corridorType);
+            corridorTypeField.tooltip = "Pathfinding algorithm for corridor generation";
+            corridorTypeField.RegisterValueChangedCallback(evt =>
+            {
+                m_corridorType = (CorridorType)evt.newValue;
+                SavePreferences();
+            });
+            corridorSettings.Add(corridorTypeField);
+
+            m_toolsBoard.Add(corridorSettings);
+
+            // ===== ADVANCED SETTINGS (Foldout) =====
+            var advancedFoldout = new Foldout { text = "Advanced Settings", value = m_showAdvanced };
+            advancedFoldout.tooltip = "Advanced parameters for fine-tuning dungeon generation";
+            advancedFoldout.RegisterValueChangedCallback(evt =>
+            {
+                m_showAdvanced = evt.newValue;
+                SavePreferences();
+            });
+
+            // Advanced Room Settings
+            var areaField = new FloatField("Area Placement Factor") { value = m_areaPlacementFactor };
+            areaField.tooltip = "Multiplier for initial room placement spread";
+            areaField.RegisterValueChangedCallback(evt =>
+            {
+                m_areaPlacementFactor = evt.newValue;
+                SavePreferences();
+            });
+            advancedFoldout.Add(areaField);
+
+            var forceModeToggle = new Toggle("Force Mode") { value = m_forceMode };
+            forceModeToggle.tooltip = "Force generation to iterate until we've reached a stable layout (max 2096)";
+            forceModeToggle.RegisterValueChangedCallback(evt =>
+            {
+                m_forceMode = evt.newValue;
+                SavePreferences();
+                iterationsField.SetEnabled(!evt.newValue);
+            });
+            advancedFoldout.Add(forceModeToggle);
+
+            var chaosSlider = new Slider("Chaos Factor", 0.0f, 1.0f) { value = m_chaosFactor };
+            chaosSlider.tooltip = "Randomness added to room velocities during generation (0 = ordered, 1 = chaotic)";
+            chaosSlider.RegisterValueChangedCallback(evt =>
+            {
+                m_chaosFactor = evt.newValue;
+                SavePreferences();
+            });
+            advancedFoldout.Add(chaosSlider);
+
+            // Create Max Room Regens field first so it can be referenced by overlap toggle
+            var maxRoomRegenerationsField = new IntegerField("Max Room Regenerations") { value = m_maxRoomRegenerations };
+            maxRoomRegenerationsField.tooltip = "Maximum attempts to regenerate room layout if overlaps are detected";
+            maxRoomRegenerationsField.SetEnabled(!m_allowRoomOverlap);
+            maxRoomRegenerationsField.RegisterValueChangedCallback(evt =>
+            {
+                m_maxRoomRegenerations = evt.newValue;
+                SavePreferences();
+            });
+
+            var allowOverlapToggle = new Toggle("Allow Room Overlap") { value = m_allowRoomOverlap };
+            allowOverlapToggle.tooltip = "Allow rooms to overlap during generation";
+            allowOverlapToggle.RegisterValueChangedCallback(evt =>
+            {
+                m_allowRoomOverlap = evt.newValue;
+                SavePreferences();
+                maxRoomRegenerationsField.SetEnabled(!evt.newValue);
+            });
+
+            advancedFoldout.Add(allowOverlapToggle);
+            advancedFoldout.Add(maxRoomRegenerationsField);
+
+            // Advanced Corridor Settings
+            var maxCorridorRegenerationsField = new IntegerField("Max Corridor Regenerations") { value = m_maxCorridorRegenerations };
+            maxCorridorRegenerationsField.tooltip = "Maximum attempts to regenerate corridors if overlaps are detected";
+            maxCorridorRegenerationsField.RegisterValueChangedCallback(evt =>
+            {
+                m_maxCorridorRegenerations = evt.newValue;
+                SavePreferences();
+            });
+            advancedFoldout.Add(maxCorridorRegenerationsField);
+
+            m_toolsBoard.Add(advancedFoldout);
 
             Add(m_toolsBoard);
         }
@@ -351,6 +479,17 @@ namespace DungeonGraph.Editor
             m_corridorWidth = EditorPrefs.GetInt(PREF_CORRIDOR_WIDTH, 2);
             m_corridorType = (CorridorType)EditorPrefs.GetInt(PREF_CORRIDOR_TYPE, (int)CorridorType.Direct);
             m_maxCorridorRegenerations = EditorPrefs.GetInt(PREF_MAX_CORRIDOR_REGENERATIONS, 3);
+            m_showAdvanced = EditorPrefs.GetBool(PREF_SHOW_ADVANCED, false);
+
+            // Load floor selection
+            m_availableFloors = DungeonFloorManager.GetAllFloors();
+            string savedFloor = EditorPrefs.GetString(PREF_SELECTED_FLOOR, "");
+            if (!string.IsNullOrEmpty(savedFloor) && m_availableFloors.Count > 0)
+            {
+                m_selectedFloorIndex = m_availableFloors.FindIndex(f => f.folderPath == savedFloor);
+                if (m_selectedFloorIndex < 0) m_selectedFloorIndex = 0;
+            }
+            UpdateCurrentFloorPath();
         }
 
         private void SavePreferences()
@@ -373,6 +512,27 @@ namespace DungeonGraph.Editor
             EditorPrefs.SetInt(PREF_CORRIDOR_WIDTH, m_corridorWidth);
             EditorPrefs.SetInt(PREF_CORRIDOR_TYPE, (int)m_corridorType);
             EditorPrefs.SetInt(PREF_MAX_CORRIDOR_REGENERATIONS, m_maxCorridorRegenerations);
+            EditorPrefs.SetBool(PREF_SHOW_ADVANCED, m_showAdvanced);
+
+            // Save floor selection
+            EditorPrefs.SetString(PREF_SELECTED_FLOOR, m_currentFloorPath);
+        }
+
+        private void UpdateCurrentFloorPath()
+        {
+            if (m_availableFloors.Count > 0 && m_selectedFloorIndex >= 0 && m_selectedFloorIndex < m_availableFloors.Count)
+            {
+                m_currentFloorPath = m_availableFloors[m_selectedFloorIndex].folderPath;
+            }
+            else
+            {
+                m_currentFloorPath = "";
+            }
+        }
+
+        public string GetCurrentFloorPath()
+        {
+            return m_currentFloorPath;
         }
 
         /// <summary>
@@ -433,7 +593,8 @@ namespace DungeonGraph.Editor
 
                 OrganicGeneration.GenerateRooms(instance, null, m_areaPlacementFactor, m_repulsionFactor,
                     m_simulationIterations, m_forceMode, m_stiffnessFactor, m_chaosFactor,
-                    m_realTimeSimulation, m_simulationSpeed, m_idealDistance, m_allowRoomOverlap, m_maxRoomRegenerations, m_maxCorridorRegenerations);
+                    m_realTimeSimulation, m_simulationSpeed, m_idealDistance, m_allowRoomOverlap, m_maxRoomRegenerations, m_maxCorridorRegenerations,
+                    m_currentFloorPath);
 
                 // Assign corridor parameters to the tilemap system
                 var generatedDungeon = GameObject.Find("Generated_Dungeon");

@@ -18,6 +18,85 @@ namespace DungeonGraph
         [Tooltip("Designated exit points for corridor connections. If empty, corridors will use room center.")]
         public Transform[] exits;               // exit transforms for corridor generation
 
+        /// <summary>
+        /// On instantiation, repopulate exits array if empty by finding "Exits" GameObject
+        /// Only runs in Play mode - in Edit mode, OrganicGeneration calls this explicitly
+        /// </summary>
+        private void Awake()
+        {
+            // Only auto-repopulate in Play mode
+            // In Edit mode, the generation system calls RepopulateExitsIfNeeded explicitly
+            if (Application.isPlaying)
+            {
+                RepopulateExitsIfNeeded();
+            }
+        }
+
+        /// <summary>
+        /// Repopulate the exits array from the "Exits" GameObject if the array is empty
+        /// </summary>
+        public void RepopulateExitsIfNeeded()
+        {
+            // If exits array is already populated, nothing to do
+            if (exits != null && exits.Length > 0)
+            {
+                // Double-check that the exits aren't all null
+                bool hasValidExit = false;
+                foreach (var exit in exits)
+                {
+                    if (exit != null)
+                    {
+                        hasValidExit = true;
+                        break;
+                    }
+                }
+
+                if (hasValidExit)
+                {
+                    return; // Exits are properly populated
+                }
+            }
+
+            // Try to find the "Exits" GameObject
+            Transform exitsContainer = transform.Find("Exits");
+            if (exitsContainer == null)
+            {
+                // Try case-insensitive search as fallback
+                foreach (Transform child in transform)
+                {
+                    if (child.name.Equals("Exits", System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        exitsContainer = child;
+                        break;
+                    }
+                }
+            }
+
+            if (exitsContainer != null)
+            {
+                // Populate exits array with all child transforms of the Exits container
+                int childCount = exitsContainer.childCount;
+                if (childCount > 0)
+                {
+                    exits = new Transform[childCount];
+                    for (int i = 0; i < childCount; i++)
+                    {
+                        exits[i] = exitsContainer.GetChild(i);
+                    }
+
+                    //Debug.Log($"[RoomTemplate] Repopulated exits array for {gameObject.name} with {childCount} exits from 'Exits' GameObject");
+                }
+                else
+                {
+                    //Debug.LogWarning($"[RoomTemplate] Found 'Exits' GameObject in {gameObject.name}, but it has no children");
+                }
+            }
+            else
+            {
+                //Debug.LogWarning($"[RoomTemplate] No 'Exits' GameObject found in {gameObject.name} to repopulate exits array");
+            }
+        }
+
         /// <summary>Recompute everything. Call this after painting or before saving.</summary>
         public void Recompute()
         {

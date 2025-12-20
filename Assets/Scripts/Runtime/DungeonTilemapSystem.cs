@@ -264,7 +264,7 @@ namespace DungeonGraph
             // Clear the tracking set
             corridorTilePositions.Clear();
 
-            Debug.Log("[DungeonTilemapSystem] Cleared all corridor tiles");
+            //Debug.Log("[DungeonTilemapSystem] Cleared all corridor tiles");
         }
 
         /// <summary>
@@ -385,6 +385,7 @@ namespace DungeonGraph
             // If no exits are defined, use room center as fallback
             if (sourceTemplate.exits == null || sourceTemplate.exits.Length == 0)
             {
+                Debug.LogWarning($"[DungeonTilemapSystem] Room {sourceRoom.name} has no exits array or empty exits array. Using room center.");
                 return sourceRoom.transform.position + sourceTemplate.worldBounds.center;
             }
 
@@ -412,11 +413,12 @@ namespace DungeonGraph
             // If we found a valid exit, use it; otherwise fallback to room center
             if (closestExit != null)
             {
+                Debug.Log($"[DungeonTilemapSystem] Room {sourceRoom.name} using closest exit point at {closestExit.position}");
                 return closestExit.position;
             }
             else
             {
-                Debug.LogWarning($"[DungeonTilemapSystem] Room {sourceRoom.name} has exits array but all are null. Using room center.");
+                Debug.LogWarning($"[DungeonTilemapSystem] Room {sourceRoom.name} has exits array with {sourceTemplate.exits.Length} entries, but all are null. Using room center.");
                 return sourceRoom.transform.position + sourceTemplate.worldBounds.center;
             }
         }
@@ -552,7 +554,7 @@ namespace DungeonGraph
                 corridorCount++;
             }
 
-            Debug.Log($"[DungeonTilemapSystem] Generated {corridorCount} corridors with {totalRegenerations} total regenerations");
+            //Debug.Log($"[DungeonTilemapSystem] Generated {corridorCount} corridors with {totalRegenerations} total regenerations");
         }
 
         /// <summary>
@@ -564,6 +566,7 @@ namespace DungeonGraph
             // If no exits are defined, use room center
             if (sourceTemplate.exits == null || sourceTemplate.exits.Length == 0)
             {
+                //Debug.LogWarning($"[DungeonTilemapSystem] Room {sourceRoom.name} has no exits array or empty exits array. Using room center.");
                 return sourceRoom.transform.position + sourceTemplate.worldBounds.center;
             }
 
@@ -579,8 +582,11 @@ namespace DungeonGraph
 
             if (validExits.Count == 0)
             {
+                Debug.LogWarning($"[DungeonTilemapSystem] Room {sourceRoom.name} has exits array with {sourceTemplate.exits.Length} entries, but all are null. Using room center.");
                 return sourceRoom.transform.position + sourceTemplate.worldBounds.center;
             }
+
+            //Debug.Log($"[DungeonTilemapSystem] Room {sourceRoom.name} using exit point (variation {variation}, {validExits.Count} valid exits available)");
 
             // For variation 0, use closest exit (default behavior)
             // For variation 1, use second-closest exit (if available)

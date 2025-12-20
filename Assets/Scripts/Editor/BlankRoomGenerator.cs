@@ -6,41 +6,60 @@ namespace DungeonGraph.Editor
 {
     public static class BlankRoomGenerator
     {
+        private const string TEMPLATE_PATH = "Assets/Prefabs/Blank_Room.prefab";
+
         [MenuItem("Assets/Create/Dungeon Graph/Blank Room", false, 0)]
         public static void CreateBlankRoom()
         {
-            // Create root Room object
-            GameObject room = new GameObject("Room");
-            room.AddComponent<RoomTemplate>();
+            GameObject room = null;
 
-            // Create Grid child
-            GameObject grid = new GameObject("Grid");
-            grid.transform.SetParent(room.transform);
+            // Try to load the template prefab
+            GameObject templatePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(TEMPLATE_PATH);
 
-            Grid gridComponent = grid.AddComponent<Grid>();
-            gridComponent.cellSize = new Vector3(1, 1, 0);
+            if (templatePrefab != null)
+            {
+                // Instantiate from template
+                room = (GameObject)PrefabUtility.InstantiatePrefab(templatePrefab);
+                Debug.Log($"[BlankRoomGenerator] Using Blank_Room template from {TEMPLATE_PATH}");
+            }
+            else
+            {
+                // Fall back to procedural generation
+                Debug.LogWarning($"[BlankRoomGenerator] Blank_Room template not found at {TEMPLATE_PATH}, using procedural generation");
 
-            Rigidbody2D rb = grid.AddComponent<Rigidbody2D>();
-            rb.bodyType = RigidbodyType2D.Static;
+                // Create root Room object
+                room = new GameObject("Room");
+                room.AddComponent<RoomTemplate>();
 
-            CompositeCollider2D compositeCollider = grid.AddComponent<CompositeCollider2D>();
-            compositeCollider.geometryType = CompositeCollider2D.GeometryType.Polygons;
+                // Create Grid child
+                GameObject grid = new GameObject("Grid");
+                grid.transform.SetParent(room.transform);
 
-            // Create Exits child
-            GameObject exits = new GameObject("Exits");
-            exits.transform.SetParent(room.transform);
+                Grid gridComponent = grid.AddComponent<Grid>();
+                gridComponent.cellSize = new Vector3(1, 1, 0);
 
-            // Create Tilemap_Floor child (child of Grid)
-            GameObject tilemapFloor = new GameObject("Tilemap_Floor");
-            tilemapFloor.transform.SetParent(grid.transform);
+                Rigidbody2D rb = grid.AddComponent<Rigidbody2D>();
+                rb.bodyType = RigidbodyType2D.Static;
 
-            Tilemap tilemap = tilemapFloor.AddComponent<Tilemap>();
-            TilemapRenderer tilemapRenderer = tilemapFloor.AddComponent<TilemapRenderer>();
-            tilemapRenderer.sortingOrder = 0;
+                CompositeCollider2D compositeCollider = grid.AddComponent<CompositeCollider2D>();
+                compositeCollider.geometryType = CompositeCollider2D.GeometryType.Polygons;
 
-            // Optionally add TilemapCollider2D for collision (common in dungeon rooms)
-            TilemapCollider2D tilemapCollider = tilemapFloor.AddComponent<TilemapCollider2D>();
-            tilemapCollider.usedByComposite = true;
+                // Create Exits child
+                GameObject exits = new GameObject("Exits");
+                exits.transform.SetParent(room.transform);
+
+                // Create Tilemap_Floor child (child of Grid)
+                GameObject tilemapFloor = new GameObject("Tilemap_Floor");
+                tilemapFloor.transform.SetParent(grid.transform);
+
+                Tilemap tilemap = tilemapFloor.AddComponent<Tilemap>();
+                TilemapRenderer tilemapRenderer = tilemapFloor.AddComponent<TilemapRenderer>();
+                tilemapRenderer.sortingOrder = 0;
+
+                // Optionally add TilemapCollider2D for collision (common in dungeon rooms)
+                TilemapCollider2D tilemapCollider = tilemapFloor.AddComponent<TilemapCollider2D>();
+                tilemapCollider.usedByComposite = true;
+            }
 
             // Get the active folder path in the Project window
             string path = GetActiveFolderPath();

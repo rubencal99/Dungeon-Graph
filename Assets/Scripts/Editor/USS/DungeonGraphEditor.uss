@@ -103,32 +103,42 @@ DungeonGraphView
 }
 
 /* Colors per node type - center jack colors */
-.node-start   #center-jack { background-color: #1db954; }
-.node-basic   #center-jack { background-color: #60a5fa; }
-.node-hub     #center-jack { background-color: #a78bfa; }
-.node-end     #center-jack { background-color: #f87171; }
+.node-start   #center-jack { background-color: #006400; }
+.node-basic   #center-jack { background-color: #00008B; }
+.node-hub     #center-jack { background-color: #411B8B; }
+.node-end     #center-jack { background-color: #FF8C00; }
 .node-debug   #center-jack { background-color: #fbbf24; }
 .node-boss    #center-jack { background-color: #fb2424; }
+.node-reward  #center-jack { background-color: #fad700; }
+
+/* Custom nodes get their colors applied dynamically via C# */
+.node-custom #center-jack {
+  /* Colors set dynamically in DungeonGraphEditorNode.ApplyCustomNodeColors */
+}
+
+.node-custom .main-container {
+  /* Colors set dynamically in DungeonGraphEditorNode.ApplyCustomNodeColors */
+}
 
 /* Node background colors - subtle tints matching the jack color */
 .node-start .main-container {
-  background-color: #14321e;
-  border-color: #1db954;
+  background-color: #001a00;
+  border-color: #006400;
 }
 
 .node-basic .main-container {
-  background-color: #1b2636;
-  border-color: #60a5fa;
+  background-color: #00001a;
+  border-color: #00008B;
 }
 
 .node-hub .main-container {
-  background-color: #241733;
-  border-color: #a78bfa;
+  background-color: #150a1f;
+  border-color: #411B8B;
 }
 
 .node-end .main-container {
-  background-color: #341a1a;
-  border-color: #f87171;
+  background-color: #331a00;
+  border-color: #FF8C00;
 }
 
 .node-debug .main-container {
@@ -139,6 +149,11 @@ DungeonGraphView
 .node-boss .main-container {
   background-color: #2d1212;
   border-color: #fb2424;
+}
+
+.node-reward .main-container {
+  background-color: #2d2812;
+  border-color: #fad700;
 }
 
 /* Nodes with extension containers need more height */
@@ -161,4 +176,17 @@ DungeonGraphView
 /* Hover effect */
 .dungeon-node:hover .main-container {
   border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* Section styling for Actions and Basic Settings */
+.section-header {
+  font-size: 14px;
+  -unity-font-style: bold;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.section-sub-header {
+  font-size: 14px;
+  -unity-font-style: bold;
+  color: rgba(125, 125, 125, 1);
 }

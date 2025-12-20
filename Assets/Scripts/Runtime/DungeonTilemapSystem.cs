@@ -557,7 +557,7 @@ namespace DungeonGraph
             //Debug.Log($"[DungeonTilemapSystem] Generated {corridorCount} corridors with {totalRegenerations} total regenerations");
         }
 
-        /// <summary>
+        /// <summary>/
         /// Get a connection point with variation based on attempt number
         /// </summary>
         private Vector3 GetConnectionPointVariation(GameObject sourceRoom, RoomTemplate sourceTemplate,

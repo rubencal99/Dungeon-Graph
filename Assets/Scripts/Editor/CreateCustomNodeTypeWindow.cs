@@ -27,7 +27,7 @@ namespace DungeonGraph.Editor
         {
             EditorGUILayout.Space(10);
 
-            EditorGUILayout.LabelField("Create New Node Type", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Custom Node Settings", EditorStyles.boldLabel);
             EditorGUILayout.Space(5);
 
             EditorGUILayout.BeginVertical("box");

@@ -25,6 +25,8 @@ namespace DungeonGraph.Editor
         private DungeonGraphWindowSearchProvider m_searchProvider;
 
         private Blackboard m_toolsBoard;
+        private Blackboard m_nodeSettingsBoard;
+        private DungeonGraphEditorNode m_selectedNode;
 
         // Organic generation parameters
         private float m_areaPlacementFactor = 2.0f;
@@ -71,6 +73,9 @@ namespace DungeonGraph.Editor
         private const string PREF_CORRIDOR_TYPE = "DungeonGraph.CorridorType";
         private const string PREF_SHOW_ADVANCED = "DungeonGraph.ShowAdvanced";
         private const string PREF_SELECTED_FLOOR = "DungeonGraph.SelectedFloor";
+        private const string PREF_TOOLS_PANEL_STICKY = "DungeonGraph.ToolsPanelSticky";
+
+        private bool m_toolsPanelSticky = true; // Track if panel should stick to top-right
 
         public DungeonGraphView(SerializedObject serializedObject, DungeonGraphEditorWindow window)
         {
@@ -116,6 +121,11 @@ namespace DungeonGraph.Editor
             this.AddManipulator(new ClickSelector());
             this.SetupZoom(0.5f, 10f);
 
+            // Enable copy/paste
+            serializeGraphElements = SerializeGraphElementsCallback;
+            unserializeAndPaste = UnserializeAndPasteCallback;
+            canPasteSerializedData = CanPasteSerializedDataCallback;
+
             DrawNodes();
             DrawConnections();
 
@@ -130,7 +140,34 @@ namespace DungeonGraph.Editor
 
             graphViewChanged += OnGraphViewChangedEvent;
 
+            // Track node selection changes
+            RegisterCallback<PointerDownEvent>(OnPointerDown, TrickleDown.TrickleDown);
+
             BuildToolsPanel();
+            BuildNodeSettingsPanel();
+        }
+
+        private void OnPointerDown(PointerDownEvent evt)
+        {
+            // Use schedule to defer the check until after selection is updated
+            schedule.Execute(() =>
+            {
+                // Check current selection
+                var selectedNodes = selection.OfType<DungeonGraphEditorNode>().ToList();
+
+                if (selectedNodes.Count == 1)
+                {
+                    // Single node selected
+                    var node = selectedNodes[0];
+                    UpdateNodeSettingsPanel(node);
+                }
+                else if (selectedNodes.Count == 0)
+                {
+                    // Nothing selected or non-node element selected
+                    UpdateNodeSettingsPanel(null);
+                }
+                // For multiple nodes selected, keep the current panel state
+            });
         }
 
         private void BuildToolsPanel()
@@ -145,12 +182,36 @@ namespace DungeonGraph.Editor
             // Make it draggable | collapsible | resizable
             m_toolsBoard.capabilities |= Capabilities.Movable | Capabilities.Collapsible | Capabilities.Resizable;
 
-            // Position and a reasonable default size that fits all parameters and buttons
-            m_toolsBoard.SetPosition(new Rect(16, 16, 300, 600));
+            // Position at top-right corner with reasonable default size
+            // Will be repositioned on geometry change to stick to top-right
+            float defaultWidth = 320;
+            float defaultHeight = 600;
+            // Use a safe default position if layout width is not yet initialized
+            float xPos = layout.width > defaultWidth ? layout.width - defaultWidth - 16 : 16;
+            m_toolsBoard.SetPosition(new Rect(xPos, 16, defaultWidth, defaultHeight));
+
+            // Set minimum size to prevent content overlap
+            m_toolsBoard.style.minWidth = 300;
+            m_toolsBoard.style.minHeight = 400;
 
             var addButton = m_toolsBoard.Q<Button>("addButton");
             if (addButton != null)
                 addButton.style.display = DisplayStyle.None;
+
+            // Track when user manually moves the panel
+            m_toolsBoard.RegisterCallback<MouseDownEvent>(evt =>
+            {
+                // If user clicks on the title bar to drag, mark panel as no longer sticky
+                var target = evt.target as VisualElement;
+                if (target != null && target.name == "titleLabel")
+                {
+                    m_toolsPanelSticky = false;
+                    SavePreferences();
+                }
+            });
+
+            // Register callback to keep panel at top-right when view resizes
+            RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
 
             // Create a styled header for Actions
             var actionsHeader = new Label("Actions");
@@ -251,7 +312,7 @@ namespace DungeonGraph.Editor
                         BuildToolsPanel();
 
                         EditorUtility.DisplayDialog("Success",
-                            $"Floor '{floorName}' created successfully with all standard node folders!", "OK");
+                            $"Floor '{floorName}' created successfully with all standard and custom node folders!", "OK");
                     }
                     else
                     {
@@ -280,7 +341,7 @@ namespace DungeonGraph.Editor
             var roomSettings = new BlackboardSection { title = "Room Settings" };
             roomSettings.name = "room-settings";
 
-            var idealDistanceSlider = new Slider("Ideal Distance", 5f, 50f) { value = m_idealDistance };
+            var idealDistanceSlider = new Slider("Ideal Distance", 1f, 50f) { value = m_idealDistance };
             idealDistanceSlider.showInputField = true;
             idealDistanceSlider.tooltip = "Target distance between connected rooms";
             idealDistanceSlider.RegisterValueChangedCallback(evt =>
@@ -381,14 +442,16 @@ namespace DungeonGraph.Editor
 
             m_toolsBoard.Add(corridorSettings);
 
-            // ===== ADVANCED SETTINGS (Foldout) =====
+            // ===== ADVANCED SETTINGS (Foldout with ScrollView) =====
             var advancedFoldout = new Foldout { text = "Advanced Settings", value = m_showAdvanced };
             advancedFoldout.tooltip = "Advanced parameters for fine-tuning dungeon generation";
-            advancedFoldout.RegisterValueChangedCallback(evt =>
-            {
-                m_showAdvanced = evt.newValue;
-                SavePreferences();
-            });
+
+            // Create scroll view for advanced settings
+            var advancedScrollView = new ScrollView(ScrollViewMode.Vertical);
+            advancedScrollView.style.maxHeight = 250; // Limit height to enable scrolling
+
+            // Create container for advanced content
+            var advancedContent = new VisualElement();
 
             // Advanced Room Settings
             var areaField = new FloatField("Area Placement Factor") { value = m_areaPlacementFactor };
@@ -398,7 +461,7 @@ namespace DungeonGraph.Editor
                 m_areaPlacementFactor = evt.newValue;
                 SavePreferences();
             });
-            advancedFoldout.Add(areaField);
+            advancedContent.Add(areaField);
 
             var forceModeToggle = new Toggle("Force Mode") { value = m_forceMode };
             forceModeToggle.tooltip = "Force generation to iterate until we've reached a stable layout (max 2096)";
@@ -408,16 +471,17 @@ namespace DungeonGraph.Editor
                 SavePreferences();
                 iterationsField.SetEnabled(!evt.newValue);
             });
-            advancedFoldout.Add(forceModeToggle);
+            advancedContent.Add(forceModeToggle);
 
             var chaosSlider = new Slider("Chaos Factor", 0.0f, 1.0f) { value = m_chaosFactor };
+            chaosSlider.showInputField = true;
             chaosSlider.tooltip = "Randomness added to room velocities during generation (0 = ordered, 1 = chaotic)";
             chaosSlider.RegisterValueChangedCallback(evt =>
             {
                 m_chaosFactor = evt.newValue;
                 SavePreferences();
             });
-            advancedFoldout.Add(chaosSlider);
+            advancedContent.Add(chaosSlider);
 
             // Create Max Room Regens field first so it can be referenced by overlap toggle
             var maxRoomRegenerationsField = new IntegerField("Max Room Regenerations") { value = m_maxRoomRegenerations };
@@ -438,8 +502,8 @@ namespace DungeonGraph.Editor
                 maxRoomRegenerationsField.SetEnabled(!evt.newValue);
             });
 
-            advancedFoldout.Add(allowOverlapToggle);
-            advancedFoldout.Add(maxRoomRegenerationsField);
+            advancedContent.Add(allowOverlapToggle);
+            advancedContent.Add(maxRoomRegenerationsField);
 
             // Advanced Corridor Settings
             var maxCorridorRegenerationsField = new IntegerField("Max Corridor Regenerations") { value = m_maxCorridorRegenerations };
@@ -449,11 +513,180 @@ namespace DungeonGraph.Editor
                 m_maxCorridorRegenerations = evt.newValue;
                 SavePreferences();
             });
-            advancedFoldout.Add(maxCorridorRegenerationsField);
+            advancedContent.Add(maxCorridorRegenerationsField);
+
+            // Add content to scroll view and scroll view to foldout
+            advancedScrollView.Add(advancedContent);
+            advancedFoldout.Add(advancedScrollView);
+
+            // Register foldout value changed callback
+            advancedFoldout.RegisterValueChangedCallback(evt =>
+            {
+                m_showAdvanced = evt.newValue;
+                SavePreferences();
+            });
 
             m_toolsBoard.Add(advancedFoldout);
 
             Add(m_toolsBoard);
+        }
+
+        private void BuildNodeSettingsPanel()
+        {
+            // Create Node Settings panel
+            m_nodeSettingsBoard = new Blackboard(this)
+            {
+                title = "Node Settings",
+                subTitle = "No node selected"
+            };
+
+            // Make it draggable, collapsible, and resizable
+            m_nodeSettingsBoard.capabilities |= Capabilities.Movable | Capabilities.Collapsible | Capabilities.Resizable;
+
+            // Position to the left of the tools panel
+            float defaultWidth = 320;
+            float defaultHeight = 300;
+            float toolsPanelWidth = 320;
+            // Use a safe default position if layout width is not yet initialized
+            float xPos = layout.width > (defaultWidth + toolsPanelWidth + 48)
+                ? layout.width - defaultWidth - toolsPanelWidth - 32
+                : 16;
+            m_nodeSettingsBoard.SetPosition(new Rect(xPos, 16, defaultWidth, defaultHeight));
+
+            // Set minimum size
+            m_nodeSettingsBoard.style.minWidth = 250;
+            m_nodeSettingsBoard.style.minHeight = 150;
+
+            var addButton = m_nodeSettingsBoard.Q<Button>("addButton");
+            if (addButton != null)
+                addButton.style.display = DisplayStyle.None;
+
+            // Always visible
+            m_nodeSettingsBoard.style.display = DisplayStyle.Flex;
+
+            Add(m_nodeSettingsBoard);
+        }
+
+        private void UpdateNodeSettingsPanel(DungeonGraphEditorNode node)
+        {
+            if (node == null)
+            {
+                // Don't hide the panel, just keep showing the last selected node
+                return;
+            }
+
+            m_selectedNode = node;
+            m_nodeSettingsBoard.subTitle = node.Node.GetType().Name;
+
+            // Clear existing content
+            m_nodeSettingsBoard.Clear();
+
+            // Get connection count for this node
+            int connectionCount = GetNodeConnectionCount(node.Node.id);
+
+            // Create Spawn Chance section
+            var spawnChanceSection = new VisualElement();
+            spawnChanceSection.style.marginTop = 10;
+            spawnChanceSection.style.marginBottom = 10;
+            spawnChanceSection.style.marginLeft = 5;
+            spawnChanceSection.style.marginRight = 5;
+
+            var spawnChanceLabel = new Label("Spawn Chance");
+            spawnChanceLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            spawnChanceLabel.style.marginBottom = 5;
+            spawnChanceSection.Add(spawnChanceLabel);
+
+            var spawnChanceSlider = new Slider("Chance (%)", 0f, 100f)
+            {
+                value = node.Node.spawnChance
+            };
+            spawnChanceSlider.showInputField = true;
+
+            // Always allow slider adjustment, but show warning if conditions aren't met
+            spawnChanceSlider.RegisterValueChangedCallback(evt =>
+            {
+                node.Node.spawnChance = evt.newValue;
+                EditorUtility.SetDirty(m_dungeonGraph);
+
+                // Update warning if needed
+                UpdateSpawnChanceWarning(spawnChanceSection, node, connectionCount);
+            });
+
+            spawnChanceSection.Add(spawnChanceSlider);
+
+            // Add warning label
+            UpdateSpawnChanceWarning(spawnChanceSection, node, connectionCount);
+
+            m_nodeSettingsBoard.Add(spawnChanceSection);
+        }
+
+        private void UpdateSpawnChanceWarning(VisualElement container, DungeonGraphEditorNode node, int connectionCount)
+        {
+            // Remove existing warning if any
+            var existingWarning = container.Q<Label>("spawn-chance-warning");
+            if (existingWarning != null)
+            {
+                container.Remove(existingWarning);
+            }
+
+            // Add warning if spawn chance < 100 and connections > 2
+            if (node.Node.spawnChance < 100f && connectionCount > 2)
+            {
+                var warningLabel = new Label("⚠ Conditional nodes can only be used with maximum 2 connections");
+                warningLabel.name = "spawn-chance-warning";
+                warningLabel.style.color = new Color(1f, 0.6f, 0f); // Orange
+                warningLabel.style.marginTop = 5;
+                warningLabel.style.whiteSpace = WhiteSpace.Normal;
+                warningLabel.style.fontSize = 11;
+                container.Add(warningLabel);
+            }
+        }
+
+        private int GetNodeConnectionCount(string nodeId)
+        {
+            if (m_dungeonGraph.Connections == null) return 0;
+
+            int count = 0;
+            foreach (var connection in m_dungeonGraph.Connections)
+            {
+                if (connection.inputPort.nodeId == nodeId || connection.outputPort.nodeId == nodeId)
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        private void OnGeometryChanged(GeometryChangedEvent evt)
+        {
+            // Keep the tools panel positioned at top-right when the view resizes (if sticky)
+            if (m_toolsBoard != null && m_toolsPanelSticky && layout.width > 0)
+            {
+                Rect currentPos = m_toolsBoard.GetPosition();
+                float newX = layout.width - currentPos.width - 16;
+
+                // Ensure panel stays within bounds
+                if (newX < 0) newX = 0;
+
+                m_toolsBoard.SetPosition(new Rect(newX, currentPos.y, currentPos.width, currentPos.height));
+            }
+
+            // Also reposition Node Settings panel if it's visible and at the initial position
+            if (m_nodeSettingsBoard != null && m_nodeSettingsBoard.style.display == DisplayStyle.Flex && layout.width > 0)
+            {
+                Rect currentPos = m_nodeSettingsBoard.GetPosition();
+
+                // Check if it's still at the default left position (meaning it hasn't been manually moved)
+                if (currentPos.x < 100) // If positioned at left edge, recalculate position
+                {
+                    float toolsPanelWidth = 320;
+                    float newX = layout.width - currentPos.width - toolsPanelWidth - 32;
+
+                    if (newX < 0) newX = 0;
+
+                    m_nodeSettingsBoard.SetPosition(new Rect(newX, currentPos.y, currentPos.width, currentPos.height));
+                }
+            }
         }
 
         private void LoadPreferences()
@@ -480,6 +713,7 @@ namespace DungeonGraph.Editor
             m_corridorType = (CorridorType)EditorPrefs.GetInt(PREF_CORRIDOR_TYPE, (int)CorridorType.Direct);
             m_maxCorridorRegenerations = EditorPrefs.GetInt(PREF_MAX_CORRIDOR_REGENERATIONS, 3);
             m_showAdvanced = EditorPrefs.GetBool(PREF_SHOW_ADVANCED, false);
+            m_toolsPanelSticky = EditorPrefs.GetBool(PREF_TOOLS_PANEL_STICKY, true);
 
             // Load floor selection
             m_availableFloors = DungeonFloorManager.GetAllFloors();
@@ -513,6 +747,7 @@ namespace DungeonGraph.Editor
             EditorPrefs.SetInt(PREF_CORRIDOR_TYPE, (int)m_corridorType);
             EditorPrefs.SetInt(PREF_MAX_CORRIDOR_REGENERATIONS, m_maxCorridorRegenerations);
             EditorPrefs.SetBool(PREF_SHOW_ADVANCED, m_showAdvanced);
+            EditorPrefs.SetBool(PREF_TOOLS_PANEL_STICKY, m_toolsPanelSticky);
 
             // Save floor selection
             EditorPrefs.SetString(PREF_SELECTED_FLOOR, m_currentFloorPath);
@@ -822,6 +1057,21 @@ namespace DungeonGraph.Editor
                     // ApplyAimTangents(edge);          // aim now
                     // edge.RegisterCallback<GeometryChangedEvent>(_ => ApplyAimTangents(edge)); // keep aimed on layout changes
                 }
+
+                // Update Node Settings if a selected node's connections changed
+                if (m_selectedNode != null)
+                {
+                    UpdateNodeSettingsPanel(m_selectedNode);
+                }
+            }
+
+            // Update Node Settings when connections are removed
+            if (graphViewChange.elementsToRemove != null && graphViewChange.elementsToRemove.OfType<Edge>().Any())
+            {
+                if (m_selectedNode != null)
+                {
+                    UpdateNodeSettingsPanel(m_selectedNode);
+                }
             }
 
             return graphViewChange;
@@ -886,12 +1136,52 @@ namespace DungeonGraph.Editor
 
         private void RemoveNode(DungeonGraphEditorNode editorNode)
         {
-            //Undo.RecordObject(m_serializedObject.targetObject, "Removed Node");
-            m_dungeonGraph.Nodes.Remove(editorNode.Node);
-            m_nodeDictionary.Remove(editorNode.Node.id);
-            m_graphNodes.Remove(editorNode);
-            m_serializedObject.Update();
+            string nodeId = editorNode.Node.id;
 
+            // Remove all connections that involve this node
+            var connectionsToRemove = m_dungeonGraph.Connections
+                .Where(c => c.inputPort.nodeId == nodeId || c.outputPort.nodeId == nodeId)
+                .ToList();
+
+            // Find and remove the visual edges
+            var edgesToRemove = new List<Edge>();
+            foreach (var connection in connectionsToRemove)
+            {
+                foreach (var kvp in m_connectionDictionary)
+                {
+                    var conn = kvp.Value;
+                    if (conn.inputPort.nodeId == connection.inputPort.nodeId &&
+                        conn.inputPort.portIndex == connection.inputPort.portIndex &&
+                        conn.outputPort.nodeId == connection.outputPort.nodeId &&
+                        conn.outputPort.portIndex == connection.outputPort.portIndex)
+                    {
+                        edgesToRemove.Add(kvp.Key);
+                        break;
+                    }
+                }
+            }
+
+            // Remove connections from data
+            foreach (var connection in connectionsToRemove)
+            {
+                m_dungeonGraph.Connections.Remove(connection);
+            }
+
+            // Remove visual edges
+            foreach (var edge in edgesToRemove)
+            {
+                m_connectionDictionary.Remove(edge);
+                edge.RemoveFromHierarchy();
+            }
+
+            // Remove the node itself
+            m_dungeonGraph.Nodes.Remove(editorNode.Node);
+            m_nodeDictionary.Remove(nodeId);
+            m_graphNodes.Remove(editorNode);
+
+            // Force serialization update
+            m_serializedObject.Update();
+            EditorUtility.SetDirty(m_dungeonGraph);
         }
 
         private void DrawNodes()
@@ -1146,6 +1436,123 @@ namespace DungeonGraph.Editor
                 foreach (var e in port.connections)
                     ApplyAimTangents(e);
             }
+        }
+
+        // ===== COPY/PASTE FUNCTIONALITY =====
+
+        private string SerializeGraphElementsCallback(IEnumerable<GraphElement> elements)
+        {
+            var nodes = elements.OfType<DungeonGraphEditorNode>().Select(n => n.Node).ToList();
+
+            // Create a wrapper ScriptableObject to leverage Unity's serialization
+            var wrapper = ScriptableObject.CreateInstance<CopyPasteWrapper>();
+            wrapper.nodes = nodes;
+
+            string json = EditorJsonUtility.ToJson(wrapper, true);
+            ScriptableObject.DestroyImmediate(wrapper);
+
+            return json;
+        }
+
+        private void UnserializeAndPasteCallback(string operationName, string data)
+        {
+            // Create a wrapper to deserialize into
+            var wrapper = ScriptableObject.CreateInstance<CopyPasteWrapper>();
+            EditorJsonUtility.FromJsonOverwrite(data, wrapper);
+
+            if (wrapper?.nodes == null || wrapper.nodes.Count == 0)
+            {
+                ScriptableObject.DestroyImmediate(wrapper);
+                return;
+            }
+
+            // Offset for pasted nodes
+            Vector2 pasteOffset = new Vector2(50, 50);
+
+            Undo.RecordObject(m_serializedObject.targetObject, "Paste Nodes");
+
+            foreach (var originalNode in wrapper.nodes)
+            {
+                if (originalNode == null)
+                    continue;
+
+                // Create a new instance - this automatically generates a new GUID
+                if (!(Activator.CreateInstance(originalNode.GetType()) is DungeonGraphNode newNode))
+                    continue;
+
+                // Copy field values using reflection to preserve node-specific data
+                CopyNodeFields(originalNode, newNode);
+
+                // Offset position
+                var oldPos = originalNode.position;
+                newNode.SetPosition(new Rect(oldPos.position + pasteOffset, oldPos.size));
+
+                // Add to graph
+                m_dungeonGraph.Nodes.Add(newNode);
+                AddNodeToGraph(newNode);
+            }
+
+            ScriptableObject.DestroyImmediate(wrapper);
+            m_serializedObject.Update();
+            EditorUtility.SetDirty(m_dungeonGraph);
+        }
+
+        private void CopyNodeFields(DungeonGraphNode source, DungeonGraphNode destination)
+        {
+            // Get all fields from the source node's type hierarchy
+            var type = source.GetType();
+            while (type != null && type != typeof(object))
+            {
+                var fields = type.GetFields(System.Reflection.BindingFlags.Public |
+                                           System.Reflection.BindingFlags.NonPublic |
+                                           System.Reflection.BindingFlags.Instance |
+                                           System.Reflection.BindingFlags.DeclaredOnly);
+
+                foreach (var field in fields)
+                {
+                    // Skip guid and position fields - we handle those separately
+                    if (field.Name == "m_guid" || field.Name == "m_position")
+                        continue;
+
+                    // Skip readonly/const fields
+                    if (field.IsLiteral || field.IsInitOnly)
+                        continue;
+
+                    try
+                    {
+                        var value = field.GetValue(source);
+                        field.SetValue(destination, value);
+                    }
+                    catch
+                    {
+                        // Skip fields that can't be copied
+                    }
+                }
+
+                type = type.BaseType;
+            }
+        }
+
+        private bool CanPasteSerializedDataCallback(string data)
+        {
+            try
+            {
+                var wrapper = ScriptableObject.CreateInstance<CopyPasteWrapper>();
+                EditorJsonUtility.FromJsonOverwrite(data, wrapper);
+                bool canPaste = wrapper?.nodes != null && wrapper.nodes.Count > 0;
+                ScriptableObject.DestroyImmediate(wrapper);
+                return canPaste;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private class CopyPasteWrapper : ScriptableObject
+        {
+            [SerializeReference]
+            public List<DungeonGraphNode> nodes = new List<DungeonGraphNode>();
         }
     }
 }

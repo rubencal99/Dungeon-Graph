@@ -11,7 +11,7 @@ public static class RoomAuthoringTools
 
     // ---------- PUBLIC MENUS ----------
 
-    [MenuItem("Dungeon/Rooms/Bake & Save/Save %#b")] // Ctrl/Cmd+Shift+B
+    [MenuItem("Dungeon/Rooms/Save")] 
     public static void BakeSaveQuick()
     {
         var go = GetSelectedRoomRootOrWarn();
@@ -46,7 +46,7 @@ public static class RoomAuthoringTools
         SavePrefab(go, file);
     }
 
-    [MenuItem("Dungeon/Rooms/Bake & Save/Save As... _F12")] // F12 opens dialog
+    [MenuItem("Dungeon/Rooms/Save As...")] // F12 opens dialog
     public static void BakeSaveAs()
     {
         var go = GetSelectedRoomRootOrWarn();

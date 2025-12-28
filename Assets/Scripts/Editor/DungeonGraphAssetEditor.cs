@@ -11,9 +11,14 @@ namespace DungeonGraph.Editor
         public static bool OnOpenAsset(int instanceId, int index)
         {
             Object asset = EditorUtility.InstanceIDToObject(instanceId);
-            if (asset.GetType() == typeof(DungeonGraphAsset))
+            if (asset == null)
             {
-                DungeonGraphEditorWindow.Open((DungeonGraphAsset)asset);
+                return false;
+            }
+
+            if (asset is DungeonGraphAsset dungeonGraph)
+            {
+                DungeonGraphEditorWindow.Open(dungeonGraph);
                 return true;
             }
             return false;

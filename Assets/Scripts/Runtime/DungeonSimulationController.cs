@@ -99,6 +99,33 @@ namespace DungeonGraph
             // Wait a brief moment to show initial positions
             //yield return new WaitForSeconds(0.5f);
 
+            // Validate graph has connections
+            if (m_graph.Connections == null || m_graph.Connections.Count == 0)
+            {
+                Debug.LogWarning("[DungeonSimulationController] Graph has no connections. Skipping physics simulation.");
+                m_isSimulating = false;
+
+                // Still need to call post-simulation setup
+                try
+                {
+                    var postSimType = System.Type.GetType("DungeonGraph.Editor.OrganicGeneration, Assembly-CSharp-Editor");
+                    if (postSimType != null)
+                    {
+                        var method = postSimType.GetMethod("PostSimulationSetup",
+                            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                        method?.Invoke(null, new object[] { m_graph, gameObject });
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[DungeonSimulationController] Error in post-simulation: {ex.Message}");
+                }
+
+                yield return null;
+                Destroy(this);
+                yield break;
+            }
+
             // Calculate graph distances for repulsion scaling
             var graphDistances = CalculateGraphDistances(m_graph);
             var adjacency = BuildAdjacency(m_graph);
@@ -200,8 +227,22 @@ namespace DungeonGraph
                                 ? graphDistances[(nodeA, nodeB)]
                                 : 1;
 
+                            // Cap graph distance to prevent infinity issues with disjointed graphs
+                            // If nodes are unreachable (graphDist >= 999999), treat them as maximally distant (10)
+                            if (graphDist >= 999999)
+                            {
+                                graphDist = 10; // Cap at a reasonable maximum
+                            }
+
                             // Stronger repulsion for nodes that are farther apart in the graph
                             float repulsion = (repulsionStrength * graphDist) / (distance * distance);
+
+                            // Safety check: prevent infinite or NaN values
+                            if (float.IsNaN(repulsion) || float.IsInfinity(repulsion))
+                            {
+                                Debug.LogError($"[DungeonSimulationController] Invalid repulsion calculated between {nodeA} and {nodeB}. GraphDist={graphDist}, Distance={distance}");
+                                continue;
+                            }
 
                             forces[nodeA] -= direction * repulsion;
                             forces[nodeB] += direction * repulsion;
@@ -379,6 +420,15 @@ namespace DungeonGraph
                 Vector3 currentPos = m_currentPositions[nodeId];
                 Vector3 targetPos = m_targetPositions[nodeId];
 
+                // Check for NaN or Infinity values which indicate a problem
+                if (float.IsNaN(targetPos.x) || float.IsNaN(targetPos.y) ||
+                    float.IsInfinity(targetPos.x) || float.IsInfinity(targetPos.y))
+                {
+                    Debug.LogError($"[DungeonSimulationController] Invalid target position detected for node {nodeId}. Stopping simulation.");
+                    StopSimulation();
+                    return;
+                }
+
                 // Lerp towards target position
                 Vector3 newPos = Vector3.Lerp(currentPos, targetPos, Time.deltaTime * m_lerpSpeed);
                 m_currentPositions[nodeId] = newPos;
@@ -387,11 +437,28 @@ namespace DungeonGraph
                 if (m_roomInstances.ContainsKey(nodeId) && m_centerOffsets.ContainsKey(nodeId))
                 {
                     var roomObj = m_roomInstances[nodeId];
+                    if (roomObj == null)
+                    {
+                        Debug.LogError($"[DungeonSimulationController] Room object for node {nodeId} is null. Stopping simulation.");
+                        StopSimulation();
+                        return;
+                    }
+
                     Vector3 centerOffset = m_centerOffsets[nodeId];
                     // newPos is the simulation position (center), subtract offset to get GameObject position
                     roomObj.transform.position = newPos - centerOffset;
                 }
             }
+        }
+
+        /// <summary>
+        /// Safely stop the simulation and clean up
+        /// </summary>
+        private void StopSimulation()
+        {
+            m_isSimulating = false;
+            StopAllCoroutines();
+            Debug.LogWarning("[DungeonSimulationController] Simulation stopped due to error.");
         }
 
         private Dictionary<(string, string), int> CalculateGraphDistances(DungeonGraphAsset graph)
@@ -511,6 +578,13 @@ namespace DungeonGraph
         /// </summary>
         private void RestartSimulation()
         {
+            // Safety check: prevent infinite restart loops
+            if (m_isSimulating)
+            {
+                Debug.LogError("[DungeonSimulationController] Cannot restart simulation while already simulating!");
+                return;
+            }
+
             // Generate new random positions for all rooms
             var newPositions = new Dictionary<string, Vector3>();
             foreach (var nodeId in m_roomInstances.Keys)

@@ -10,11 +10,18 @@ namespace DungeonGraph
         private string m_guid;
         [SerializeField]
         private Rect m_position;
+        [SerializeField]
+        private float m_spawnChance = 100f;
 
         public string typeName;
 
         public string id => m_guid;
         public Rect position => m_position;
+        public float spawnChance
+        {
+            get => m_spawnChance;
+            set => m_spawnChance = Mathf.Clamp(value, 0f, 100f);
+        }
 
         public DungeonGraphNode()
         {

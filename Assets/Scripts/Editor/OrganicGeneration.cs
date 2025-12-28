@@ -29,6 +29,9 @@ namespace DungeonGraph.Editor
             // Reset room tracking for new generation
             spawnedRoomsByType.Clear();
 
+            // Process spawn chances and modify graph accordingly
+            ProcessSpawnChances(graph);
+
             // Create parent container
             if (parent == null)
             {
@@ -624,8 +627,21 @@ namespace DungeonGraph.Editor
                                 ? graphDistances[(nodeA, nodeB)]
                                 : 1;
 
+                            // Cap graph distance to prevent infinity issues with disjointed graphs
+                            if (graphDist >= 999999)
+                            {
+                                graphDist = 10; // Cap at a reasonable maximum for disconnected nodes
+                            }
+
                             // Stronger repulsion for nodes that are farther apart in the graph
                             float repulsion = repulsionStrength * graphDist / (distance * distance);
+
+                            // Safety check: prevent infinite or NaN values
+                            if (float.IsNaN(repulsion) || float.IsInfinity(repulsion))
+                            {
+                                Debug.LogError($"[OrganicGeneration] Invalid repulsion calculated between {nodeA} and {nodeB}. Skipping this force.");
+                                continue;
+                            }
 
                             forces[nodeA] -= direction * repulsion;
                             forces[nodeB] += direction * repulsion;
@@ -898,6 +914,95 @@ namespace DungeonGraph.Editor
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Process spawn chances for nodes with <= 2 connections
+        /// If a node doesn't spawn, connect its neighbors directly
+        /// </summary>
+        private static void ProcessSpawnChances(DungeonGraphAsset graph)
+        {
+            if (graph == null || graph.Nodes == null || graph.Connections == null)
+                return;
+
+            var nodesToRemove = new List<DungeonGraphNode>();
+            var connectionsToAdd = new List<DungeonGraphConnection>();
+            var connectionsToRemove = new List<DungeonGraphConnection>();
+
+            foreach (var node in graph.Nodes)
+            {
+                // Skip nodes with 100% spawn chance
+                if (node.spawnChance >= 100f)
+                    continue;
+
+                // Get all connections for this node
+                var nodeConnections = graph.Connections
+                    .Where(c => c.inputPort.nodeId == node.id || c.outputPort.nodeId == node.id)
+                    .ToList();
+
+                // Only process nodes with <= 2 connections
+                if (nodeConnections.Count > 2)
+                {
+                    Debug.Log($"[OrganicGeneration] Node {node.GetType().Name} has more than 2 connections.");
+                    continue;
+                    
+                }
+
+                // Roll for spawn
+                float roll = Random.Range(0f, 100f);
+                if (roll >= node.spawnChance)
+                {
+                    // Node doesn't spawn - remove it and connect its neighbors
+                    Debug.Log($"[OrganicGeneration] Node {node.GetType().Name} failed spawn chance ({roll:F1}% >= {node.spawnChance:F1}%)");
+
+                    nodesToRemove.Add(node);
+                    connectionsToRemove.AddRange(nodeConnections);
+
+                    // If the node has exactly 2 connections, connect them to each other
+                    if (nodeConnections.Count == 2)
+                    {
+                        var conn1 = nodeConnections[0];
+                        var conn2 = nodeConnections[1];
+
+                        // Determine the two neighbors
+                        string neighbor1 = conn1.inputPort.nodeId == node.id ? conn1.outputPort.nodeId : conn1.inputPort.nodeId;
+                        string neighbor2 = conn2.inputPort.nodeId == node.id ? conn2.outputPort.nodeId : conn2.inputPort.nodeId;
+
+                        // Create new connection between neighbors (if they're not already connected)
+                        bool alreadyConnected = graph.Connections.Any(c =>
+                            (c.inputPort.nodeId == neighbor1 && c.outputPort.nodeId == neighbor2) ||
+                            (c.inputPort.nodeId == neighbor2 && c.outputPort.nodeId == neighbor1));
+
+                        if (!alreadyConnected && neighbor1 != neighbor2)
+                        {
+                            var newConnection = new DungeonGraphConnection(neighbor1, 0, neighbor2, 0);
+                            connectionsToAdd.Add(newConnection);
+                            Debug.Log($"[OrganicGeneration] Connecting neighbors: {neighbor1} <-> {neighbor2}");
+                        }
+                    }
+                }
+            }
+
+            // Apply changes to graph
+            foreach (var node in nodesToRemove)
+            {
+                graph.Nodes.Remove(node);
+            }
+
+            foreach (var connection in connectionsToRemove)
+            {
+                graph.Connections.Remove(connection);
+            }
+
+            foreach (var connection in connectionsToAdd)
+            {
+                graph.Connections.Add(connection);
+            }
+
+            if (nodesToRemove.Count > 0)
+            {
+                Debug.Log($"[OrganicGeneration] Removed {nodesToRemove.Count} nodes due to spawn chance");
+            }
         }
     }
 }

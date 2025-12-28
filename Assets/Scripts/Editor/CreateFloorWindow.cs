@@ -24,7 +24,7 @@ namespace DungeonGraph.Editor
         {
             EditorGUILayout.Space(10);
 
-            EditorGUILayout.LabelField("Create New Dungeon Floor", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Dungeon Floor Settings", EditorStyles.boldLabel);
             EditorGUILayout.Space(5);
 
             EditorGUILayout.BeginVertical("box");

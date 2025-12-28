@@ -27,7 +27,6 @@ MonoBehaviour:
   - rid: 1121361551742206013
   - rid: 1121361551742206014
   - rid: 1121361551742206015
-  - rid: 1121361574758711362
   m_connections:
   - inputPort:
       nodeId: 470d1bc9-59bc-4d28-96aa-3850970e7e6b
@@ -115,12 +114,6 @@ MonoBehaviour:
       portIndex: 1
   - inputPort:
       nodeId: 785d36c0-588c-4f0a-912a-9861cf4110b9
-      portIndex: 1
-    outputPort:
-      nodeId: fe969c13-9c44-4757-9fc6-debb54e2a3d7
-      portIndex: 0
-  - inputPort:
-      nodeId: 91cf8da0-f8a5-40a5-a474-730eaa3874c0
       portIndex: 1
     outputPort:
       nodeId: fe969c13-9c44-4757-9fc6-debb54e2a3d7
@@ -267,21 +260,6 @@ MonoBehaviour:
           height: 45.333313
         typeName: DungeonGraph.RewardNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-    - rid: 1121361574758711362
-      type: {class: CustomNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
-      data:
-        m_guid: 91cf8da0-f8a5-40a5-a474-730eaa3874c0
-        m_position:
-          serializedVersion: 2
-          x: -437.33337
-          y: 889.3334
-          width: 0
-          height: 0
-        typeName: DungeonGraph.CustomNode, DungeonGraph.Runtime, Version=0.0.0.0,
-          Culture=neutral, PublicKeyToken=null
-        m_customTypeGuid: eead5d32-24cb-4227-9f9a-51fd700822a8
-        m_customTypeName: Shop
-        m_customColor: {r: 1, g: 1, b: 1, a: 1}
     - rid: 2036059381359444162
       type: {class: StartNode, ns: DungeonGraph, asm: DungeonGraph.Runtime}
       data:

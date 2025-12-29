@@ -150,8 +150,6 @@ namespace DungeonGraph
             }
 
             // Physics parameters
-            float springStiffness = 0.01f * m_params.stiffnessFactor;
-            float repulsionStrength = 50f * m_params.repulsionFactor;
             float damping = 0.9f;
             var velocities = new Dictionary<string, Vector3>();
 
@@ -172,83 +170,16 @@ namespace DungeonGraph
             {
                 var forces = new Dictionary<string, Vector3>();
 
-                // Initialize forces
-                foreach (var nodeId in m_targetPositions.Keys)
-                {
-                    forces[nodeId] = Vector3.zero;
-                }
-
-                // Spring forces (attraction between connected rooms)
-                foreach (var nodeId in m_targetPositions.Keys)
-                {
-                    if (!adjacency.ContainsKey(nodeId)) continue;
-
-                    foreach (var neighborId in adjacency[nodeId])
-                    {
-                        if (!m_targetPositions.ContainsKey(neighborId)) continue;
-
-                        Vector3 direction = m_targetPositions[neighborId] - m_targetPositions[nodeId];
-                        float distance = direction.magnitude;
-
-                        if (distance > 0.01f)
-                        {
-                            direction /= distance;
-
-                            // Calculate ideal distance for this pair: radiusA + radiusB + gap
-                            float radiusA = roomRadii.ContainsKey(nodeId) ? roomRadii[nodeId] : 5f;
-                            float radiusB = roomRadii.ContainsKey(neighborId) ? roomRadii[neighborId] : 5f;
-                            float pairIdealDistance = radiusA + radiusB + m_params.idealDistance;
-
-                            // Spring force proportional to distance from ideal
-                            float force = springStiffness * (distance - pairIdealDistance);
-                            forces[nodeId] += direction * force;
-                        }
-                    }
-                }
-
-                // Repulsion forces (all pairs, scaled by graph distance)
-                var nodes = m_targetPositions.Keys.ToList();
-                for (int i = 0; i < nodes.Count; i++)
-                {
-                    for (int j = i + 1; j < nodes.Count; j++)
-                    {
-                        var nodeA = nodes[i];
-                        var nodeB = nodes[j];
-
-                        Vector3 direction = m_targetPositions[nodeB] - m_targetPositions[nodeA];
-                        float distance = direction.magnitude;
-
-                        if (distance > 0.01f)
-                        {
-                            direction /= distance;
-
-                            // Get graph distance for repulsion scaling
-                            int graphDist = graphDistances.ContainsKey((nodeA, nodeB))
-                                ? graphDistances[(nodeA, nodeB)]
-                                : 1;
-
-                            // Cap graph distance to prevent infinity issues with disjointed graphs
-                            // If nodes are unreachable (graphDist >= 999999), treat them as maximally distant (10)
-                            if (graphDist >= 999999)
-                            {
-                                graphDist = 10; // Cap at a reasonable maximum
-                            }
-
-                            // Stronger repulsion for nodes that are farther apart in the graph
-                            float repulsion = (repulsionStrength * graphDist) / (distance * distance);
-
-                            // Safety check: prevent infinite or NaN values
-                            if (float.IsNaN(repulsion) || float.IsInfinity(repulsion))
-                            {
-                                Debug.LogError($"[DungeonSimulationController] Invalid repulsion calculated between {nodeA} and {nodeB}. GraphDist={graphDist}, Distance={distance}");
-                                continue;
-                            }
-
-                            forces[nodeA] -= direction * repulsion;
-                            forces[nodeB] += direction * repulsion;
-                        }
-                    }
-                }
+                // Use shared simulation utility for force calculation
+                DungeonSimulationUtility.CalculateForcesForIteration(
+                    m_targetPositions,
+                    adjacency,
+                    graphDistances,
+                    roomRadii,
+                    forces,
+                    m_params.repulsionFactor,
+                    m_params.stiffnessFactor,
+                    m_params.idealDistance);
 
                 // Update velocities and target positions
                 var positionUpdates = new Dictionary<string, Vector3>();

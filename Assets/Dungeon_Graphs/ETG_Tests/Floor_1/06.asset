@@ -153,6 +153,7 @@ MonoBehaviour:
           y: 98.66667
           width: 0
           height: 0
+        m_spawnChance: 100
         typeName: DungeonGraph.StartNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
     - rid: 1121361585799692289
@@ -165,6 +166,7 @@ MonoBehaviour:
           y: 821.3333
           width: 75.33331
           height: 45.333374
+        m_spawnChance: 100
         typeName: DungeonGraph.BossNode, DungeonGraph.Runtime, Version=0.0.0.0, Culture=neutral,
           PublicKeyToken=null
     - rid: 1121361585799692290
@@ -177,6 +179,7 @@ MonoBehaviour:
           y: 888
           width: 69.33331
           height: 45.333313
+        m_spawnChance: 100
         typeName: DungeonGraph.EndNode, DungeonGraph.Runtime, Version=0.0.0.0, Culture=neutral,
           PublicKeyToken=null
     - rid: 1121361585799692291
@@ -189,6 +192,7 @@ MonoBehaviour:
           y: 821.3333
           width: 76.66669
           height: 45.333374
+        m_spawnChance: 100
         typeName: DungeonGraph.CustomNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         m_customTypeGuid: eead5d32-24cb-4227-9f9a-51fd700822a8
@@ -204,6 +208,7 @@ MonoBehaviour:
           y: 210.66667
           width: 201.33334
           height: 66.66667
+        m_spawnChance: 100
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1
@@ -217,6 +222,7 @@ MonoBehaviour:
           y: 301.33334
           width: 201.33334
           height: 66.66666
+        m_spawnChance: 100
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1
@@ -230,6 +236,7 @@ MonoBehaviour:
           y: 532
           width: 201.33331
           height: 66.66669
+        m_spawnChance: 100
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1
@@ -243,6 +250,7 @@ MonoBehaviour:
           y: 621.3333
           width: 201.33337
           height: 66.66669
+        m_spawnChance: 100
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1
@@ -256,6 +264,7 @@ MonoBehaviour:
           y: 448
           width: 201.33337
           height: 66.66669
+        m_spawnChance: 100
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1
@@ -269,6 +278,7 @@ MonoBehaviour:
           y: 742.6667
           width: 193.33333
           height: 66.666626
+        m_spawnChance: 100
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 0
@@ -282,6 +292,7 @@ MonoBehaviour:
           y: 742.6667
           width: 192.66669
           height: 66.666626
+        m_spawnChance: 100
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 0
@@ -295,6 +306,7 @@ MonoBehaviour:
           y: 532
           width: 201.33333
           height: 66.66669
+        m_spawnChance: 100
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1
@@ -308,6 +320,7 @@ MonoBehaviour:
           y: 413.33334
           width: 70.66669
           height: 45.333313
+        m_spawnChance: 100
         typeName: DungeonGraph.HubNode, DungeonGraph.Runtime, Version=0.0.0.0, Culture=neutral,
           PublicKeyToken=null
     - rid: 1121361585799692301
@@ -320,6 +333,7 @@ MonoBehaviour:
           y: 665.3333
           width: 70.66666
           height: 45.333374
+        m_spawnChance: 100
         typeName: DungeonGraph.HubNode, DungeonGraph.Runtime, Version=0.0.0.0, Culture=neutral,
           PublicKeyToken=null
     - rid: 1121361585799692307
@@ -332,6 +346,7 @@ MonoBehaviour:
           y: 436
           width: 90.66669
           height: 45.333344
+        m_spawnChance: 100
         typeName: DungeonGraph.RewardNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
     - rid: 1121361585799692308
@@ -344,6 +359,7 @@ MonoBehaviour:
           y: 776
           width: 90.66667
           height: 45.333313
+        m_spawnChance: 100
         typeName: DungeonGraph.RewardNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
     - rid: 1121361585799692376
@@ -356,6 +372,7 @@ MonoBehaviour:
           y: 654.6667
           width: 201.33333
           height: 66.666626
+        m_spawnChance: 100
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1
@@ -369,6 +386,7 @@ MonoBehaviour:
           y: 654.6667
           width: 201.33334
           height: 66.666626
+        m_spawnChance: 100
         typeName: DungeonGraph.BasicNode, DungeonGraph.Runtime, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
         size: 1

@@ -361,7 +361,7 @@ namespace DungeonGraph.Editor
             });
             roomSettings.Add(repulsionField);
 
-            var stiffnessSlider = new Slider("Stiffness Factor", 0.1f, 5.0f) { value = m_stiffnessFactor };
+            var stiffnessSlider = new Slider("Stiffness Factor", 0.1f, 20.0f) { value = m_stiffnessFactor };
             stiffnessSlider.showInputField = true;
             stiffnessSlider.tooltip = "How strongly rooms are pulled toward their ideal distance";
             stiffnessSlider.RegisterValueChangedCallback(evt =>
@@ -1489,11 +1489,20 @@ namespace DungeonGraph.Editor
 
                 // Add to graph
                 m_dungeonGraph.Nodes.Add(newNode);
+
+                // Update serialized object BEFORE creating editor node
+                // This ensures the serialized property can be found in DungeonGraphEditorNode constructor
+                m_serializedObject.Update();
+
                 AddNodeToGraph(newNode);
             }
 
             ScriptableObject.DestroyImmediate(wrapper);
             m_serializedObject.Update();
+
+            // Bind the serialized object to ensure property fields are connected
+            Bind();
+
             EditorUtility.SetDirty(m_dungeonGraph);
         }
 

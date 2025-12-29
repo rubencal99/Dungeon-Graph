@@ -112,6 +112,10 @@ namespace DungeonGraph.Editor
                 if (property.GetCustomAttribute<ExposedPropertyAttribute>() is ExposedPropertyAttribute exposedProperty)
                 {
                     PropertyField field = DrawProperty(property.Name);
+                    if (field == null)
+                    {
+                        Debug.LogWarning($"[DungeonGraphEditorNode] Failed to draw property '{property.Name}' for node type {typeInfo.Name}");
+                    }
                 }
             }
 
@@ -172,8 +176,11 @@ namespace DungeonGraph.Editor
                     if (elementId.stringValue == m_graphNode.id)
                     {
                         m_serializedProperty = element;
+                        return;
                     }
                 }
+                // If we get here, the node wasn't found
+                Debug.LogWarning($"[DungeonGraphEditorNode] Could not find node {m_graphNode.id} in serialized nodes array (array size: {size})");
             }
         }
 
@@ -182,11 +189,25 @@ namespace DungeonGraph.Editor
             if (m_serializedProperty == null)
             {
                 FetchSerializedProperty();
-
             }
+
+            // Defensive null check - if serialized property still can't be found, return null
+            if (m_serializedProperty == null)
+            {
+                Debug.LogWarning($"[DungeonGraphEditorNode] Could not find serialized property for node {m_graphNode.id}");
+                return null;
+            }
+
             SerializedProperty prop = m_serializedProperty.FindPropertyRelative(propertyName);
+            if (prop == null)
+            {
+                Debug.LogWarning($"[DungeonGraphEditorNode] Could not find property '{propertyName}' on node {m_graphNode.id}");
+                return null;
+            }
+
             PropertyField field = new PropertyField(prop);
             field.bindingPath = prop.propertyPath;
+            field.Bind(m_SerializedObject); // Explicitly bind to the serialized object
             extensionContainer.Add(field);
             return field;
         }

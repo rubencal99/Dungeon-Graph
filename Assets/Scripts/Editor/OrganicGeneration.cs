@@ -6,6 +6,114 @@ using System.Linq;
 namespace DungeonGraph.Editor
 {
     /// <summary>
+    /// Spatial hash grid for efficient O(n) collision detection and proximity queries
+    /// </summary>
+    public class SpatialHashGrid
+    {
+        private readonly Dictionary<Vector2Int, List<string>> grid;
+        private readonly float cellSize;
+        private Dictionary<string, Vector3> positions;
+        private Dictionary<string, float> radii;
+
+        public SpatialHashGrid(float cellSize)
+        {
+            this.cellSize = cellSize;
+            this.grid = new Dictionary<Vector2Int, List<string>>();
+        }
+
+        /// <summary>
+        /// Rebuild the grid with current room positions and radii
+        /// </summary>
+        public void UpdateGrid(Dictionary<string, Vector3> roomPositions, Dictionary<string, float> roomRadii)
+        {
+            grid.Clear();
+            positions = roomPositions;
+            radii = roomRadii;
+
+            foreach (var kvp in roomPositions)
+            {
+                string nodeId = kvp.Key;
+                Vector3 position = kvp.Value;
+                float radius = roomRadii.ContainsKey(nodeId) ? roomRadii[nodeId] : 5f;
+
+                // Add to all cells this room occupies
+                foreach (var cell in GetOccupiedCells(position, radius))
+                {
+                    if (!grid.ContainsKey(cell))
+                        grid[cell] = new List<string>();
+
+                    grid[cell].Add(nodeId);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Get all cells that a room at given position with given radius occupies
+        /// </summary>
+        private List<Vector2Int> GetOccupiedCells(Vector3 position, float radius)
+        {
+            var cells = new List<Vector2Int>();
+
+            // Calculate bounding box of the room
+            int minX = Mathf.FloorToInt((position.x - radius) / cellSize);
+            int maxX = Mathf.FloorToInt((position.x + radius) / cellSize);
+            int minY = Mathf.FloorToInt((position.y - radius) / cellSize);
+            int maxY = Mathf.FloorToInt((position.y + radius) / cellSize);
+
+            for (int x = minX; x <= maxX; x++)
+            {
+                for (int y = minY; y <= maxY; y++)
+                {
+                    cells.Add(new Vector2Int(x, y));
+                }
+            }
+
+            return cells;
+        }
+
+        /// <summary>
+        /// Get all nearby rooms to check for repulsion (includes rooms in neighboring cells)
+        /// </summary>
+        public List<string> GetNearbyRooms(string nodeId)
+        {
+            if (!positions.ContainsKey(nodeId))
+                return new List<string>();
+
+            Vector3 position = positions[nodeId];
+            float radius = radii.ContainsKey(nodeId) ? radii[nodeId] : 5f;
+
+            var nearbyRooms = new HashSet<string>(); // Use HashSet to avoid duplicates
+
+            // Check all cells this room occupies plus their neighbors
+            foreach (var cell in GetOccupiedCells(position, radius))
+            {
+                // Check this cell and all 8 neighboring cells
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    for (int dy = -1; dy <= 1; dy++)
+                    {
+                        Vector2Int neighborCell = new Vector2Int(cell.x + dx, cell.y + dy);
+
+                        if (grid.ContainsKey(neighborCell))
+                        {
+                            foreach (string roomId in grid[neighborCell])
+                            {
+                                // Don't include self
+                                if (roomId != nodeId)
+                                {
+                                    nearbyRooms.Add(roomId);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return nearbyRooms.ToList();
+        }
+    }
+
+    /// <summary>
     /// Organic generation method using force-directed layout with spring physics
     /// </summary>
     public static class OrganicGeneration
@@ -565,7 +673,7 @@ namespace DungeonGraph.Editor
             int maxIterations = forceMode ? 2096 : iterations;
             float energyThreshold = 0.01f; // Energy considered "zero" for force mode
 
-            //Debug.Log($"[OrganicGeneration] Starting simulation with {(forceMode ? "Force Mode (max " + maxIterations + " iterations)" : iterations + " iterations")}");
+            Debug.Log($"[OrganicGeneration] Starting simulation with {(forceMode ? "Force Mode (max " + maxIterations + " iterations)" : iterations + " iterations")}");
 
             // IMPORTANT: Spring/Repulsion forces being updated
             for (int iter = 0; iter < maxIterations; iter++)
@@ -628,18 +736,19 @@ namespace DungeonGraph.Editor
                                 : 1;
 
                             // Cap graph distance to prevent infinity issues with disjointed graphs
+                            // If nodes are unreachable (graphDist >= 999999), treat them as maximally distant (10)
                             if (graphDist >= 999999)
                             {
-                                graphDist = 10; // Cap at a reasonable maximum for disconnected nodes
+                                graphDist = 10; // Cap at a reasonable maximum
                             }
 
                             // Stronger repulsion for nodes that are farther apart in the graph
-                            float repulsion = repulsionStrength * graphDist / (distance * distance);
+                            float repulsion = (repulsionStrength * graphDist) / (distance * distance);
 
                             // Safety check: prevent infinite or NaN values
                             if (float.IsNaN(repulsion) || float.IsInfinity(repulsion))
                             {
-                                Debug.LogError($"[OrganicGeneration] Invalid repulsion calculated between {nodeA} and {nodeB}. Skipping this force.");
+                                Debug.LogError($"[OrganicGeneration] Invalid repulsion calculated between {nodeA} and {nodeB}. GraphDist={graphDist}, Distance={distance}");
                                 continue;
                             }
 
@@ -662,7 +771,7 @@ namespace DungeonGraph.Editor
                             Random.Range(-1f, 1f),
                             Random.Range(-1f, 1f),
                             0f
-                        ) * chaosFactor; // Scale chaos effect
+                        ) * chaosFactor * 5f;
 
                         velocities[nodeId] += chaosVelocity;
                     }
@@ -695,7 +804,7 @@ namespace DungeonGraph.Editor
                 }
             }
 
-            //Debug.Log("[OrganicGeneration] Simulation complete");
+            Debug.Log($"[OrganicGeneration] Simulation complete.");
         }
 
         // Helper methods from ConstraintGeneration
